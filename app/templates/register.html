@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block body_class %}auth-page{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+  <img class="auth-logo" src="{{ url_for('static', filename='resources/Soulvetia1.png') }}" alt="Soulvetia">
+  <h1>Crear Cuenta</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="alerts">
+        {% for category, message in messages %}
+          <div class="alert {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form class="auth-form" method="post" action="{{ url_for('auth.register') }}">
+    <label>
+      <div class="muted" style="margin-bottom:0.35rem;">Nombre</div>
+      <input name="nombre" autocomplete="given-name" required>
+    </label>
+    <label>
+      <div class="muted" style="margin-bottom:0.35rem;">Apellido</div>
+      <input name="apellido" autocomplete="family-name" required>
+    </label>
+    <label>
+      <div class="muted" style="margin-bottom:0.35rem;">Email</div>
+      <input name="email" type="email" autocomplete="email" required>
+    </label>
+    <label>
+      <div class="muted" style="margin-bottom:0.35rem;">Usuario</div>
+      <input name="username" autocomplete="username" required>
+    </label>
+    <label>
+      <div class="muted" style="margin-bottom:0.35rem;">Contrasena</div>
+      <input name="password" type="password" autocomplete="new-password" required>
+    </label>
+    <label>
+      <div class="muted" style="margin-bottom:0.35rem;">Confirmar contrasena</div>
+      <input name="confirm_password" type="password" autocomplete="new-password" required>
+    </label>
+    <button class="button" type="submit">Registrarse</button>
+    <a class="link" style="text-align:center;" href="{{ url_for('auth.login') }}">Ya tenes cuenta? Inicia sesion</a>
+  </form>
+</div>
+{% endblock %}

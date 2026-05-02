@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hospital Veterinario</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='resources/Icono1.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --primary: #6AA58D;
+        --primary-dark: #4d826d;
+        --ink: #1F2D44;
+        --surface: #F2F4F7;
+        --surface-tint: #E6F2EC;
+        --card: #ffffff;
+        --muted: #6B7280;
+        --border: #d7dde3;
+        --danger: #b42318;
+        --danger-bg: #fff1f0;
+        --success-bg: #E6F2EC;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Poppins", Arial, Helvetica, sans-serif;
+        background: var(--surface);
+        color: var(--ink);
+      }
+      header {
+        background: linear-gradient(135deg, var(--ink), var(--primary-dark));
+        color: white;
+        min-height: 240px;
+        padding: 0;
+      }
+      .hero-banner {
+        width: 100%;
+        max-width: 460px;
+        height: auto;
+        display: block;
+      }
+      .header-content {
+        min-height: 240px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 1.5rem;
+      }
+      .header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+      }
+      header h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 4vw, 2.5rem);
+        font-weight: 700;
+        line-height: 1.1;
+      }
+      header p {
+        color: var(--surface-tint);
+        margin-bottom: 0;
+        font-weight: 400;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        max-width: 720px;
+      }
+      .brand-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 8px;
+        background: white;
+        object-fit: contain;
+        padding: 0.25rem;
+      }
+      .nav {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+      }
+      .nav a,
+      .nav button {
+        color: white;
+        text-decoration: none;
+        border: 1px solid rgba(230,242,236,0.45);
+        padding: 0.45rem 0.8rem;
+        border-radius: 8px;
+        font-size: 0.92rem;
+        font-weight: 500;
+        background: transparent;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      .nav a:hover,
+      .nav button:hover {
+        background: rgba(230,242,236,0.16);
+      }
+      .nav-form {
+        margin: 0;
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 1.5rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem;
+      }
+      .metric {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .section-title {
+        margin: 1.5rem 0 1rem;
+        font-size: 1.1rem;
+        color: var(--ink);
+        font-weight: 600;
+      }
+      ul {
+        padding-left: 1.2rem;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .alerts {
+        display: grid;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+      .alert {
+        padding: 0.85rem 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: white;
+      }
+      .alert.success {
+        border-color: var(--primary);
+        background: var(--success-bg);
+      }
+      .alert.error {
+        border-color: #f0b8b2;
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.6rem;
+        padding: 0.7rem 1rem;
+        border: 1px solid var(--primary);
+        border-radius: 8px;
+        background: var(--primary);
+        color: white;
+        font: inherit;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .button:hover {
+        background: var(--primary-dark);
+        border-color: var(--primary-dark);
+      }
+      .button.secondary {
+        background: var(--surface-tint);
+        border-color: var(--border);
+        color: var(--ink);
+      }
+      .link {
+        color: var(--primary-dark);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .link:hover {
+        text-decoration: underline;
+      }
+      .danger-link {
+        border: none;
+        background: none;
+        color: var(--danger);
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+        padding: 0;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--ink);
+        background: white;
+        font: inherit;
+      }
+      @media (max-width: 560px) {
+        .header-row {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 1rem;
+        }
+        .hero-banner {
+          max-width: 330px;
+        }
+        .brand {
+          align-items: flex-start;
+        }
+        .brand-icon {
+          width: 56px;
+          height: 56px;
+        }
+      }
+      input:focus,
+      select:focus {
+        outline: 3px solid rgba(106, 165, 141, 0.22);
+        border-color: var(--primary);
+      }
+      .auth-page {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, var(--ink), var(--primary-dark));
+      }
+      .auth-card {
+        width: min(100%, 390px);
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1.25rem;
+      }
+      .auth-logo {
+        display: block;
+        max-width: 280px;
+        width: 100%;
+        height: auto;
+        margin: 0 auto 1rem;
+      }
+      .auth-card h1 {
+        margin: 0 0 1rem;
+        text-align: center;
+        font-size: 1.35rem;
+      }
+      .auth-form {
+        display: grid;
+        gap: 0.85rem;
+      }
+    </style>
+  </head>
+  <body class="{% block body_class %}{% endblock %}">
+    {% block auth_content %}
+    <header>
+      <div class="header-content">
+        <div class="header-row">
+          <div class="brand">
+            <img class="brand-icon" src="{{ url_for('static', filename='resources/Icono2.png') }}" alt="Hospital Veterinario">
+            <div>
+              <h1>Hospital Veterinario</h1>
+              <p>Panel inicial del sistema de gestion</p>
+            </div>
+          </div>
+          <img class="hero-banner" src="{{ url_for('static', filename='resources/Banner.png') }}" alt="Soulvetia">
+        </div>
+        <nav class="nav">
+          <a href="/">Inicio</a>
+          <a href="/usuarios/">Usuarios</a>
+          {% if session.user_id %}
+          <form class="nav-form" method="post" action="{{ url_for('auth.logout') }}">
+            <button type="submit">Cerrar sesion</button>
+          </form>
+          {% endif %}
+        </nav>
+      </div>
+    </header>
+    <main>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="alerts">
+            {% for category, message in messages %}
+              <div class="alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+    {% endblock %}
+  </body>
+</html>
