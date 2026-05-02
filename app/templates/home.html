@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="grid">
+  <div class="card">
+    <div class="muted">Propietarios</div>
+    <div class="metric">{{ summary.owners_count }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Pacientes</div>
+    <div class="metric">{{ summary.patients_count }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Turnos</div>
+    <div class="metric">{{ summary.appointments_count }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Usuarios</div>
+    <div class="metric">{{ summary.users_count }}</div>
+  </div>
+</div>
+
+<div class="section-title">Pacientes registrados</div>
+<div class="card">
+  <ul>
+    {% for patient in summary.patients %}
+      <li>{{ patient.name }} - {{ patient.species }} {{ patient.breed }} - Dueño: {{ patient.owner_name }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="section-title">Próximos turnos</div>
+<div class="card">
+  <ul>
+    {% for appointment in summary.appointments %}
+      <li>{{ appointment.patient_name }} con {{ appointment.veterinarian }} - {{ appointment.scheduled_at.strftime("%d/%m/%Y %H:%M") }} - {{ appointment.reason }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
