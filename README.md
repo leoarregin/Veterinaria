@@ -1,21 +1,13 @@
 # Hospital Veterinario
 
-Proyecto base en Python con arquitectura MVC para un Hospital Veterinario.
-
-## Estructura
-
-- `app.py`: punto de entrada de la aplicación
-- `app/`: paquete principal
-- `app/controllers/`: lógica de control
-- `app/models/`: modelos de dominio
-- `app/views/`: vistas y plantillas
-- `app/services/`: reglas de negocio y repositorio simple en memoria
+Proyecto base en Python y Flask con arquitectura MVC para la gestion de un Hospital Veterinario.
 
 ## Requisitos
 
 - Python 3.10+
+- Flask 3.0.3
 
-## Instalación
+## Instalacion
 
 ```bash
 python -m venv .venv
@@ -23,10 +15,280 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## Ejecución
+## Ejecucion
 
 ```bash
 python -m app
 ```
 
+Tambien se puede ejecutar:
+
+```bash
+python run.py
+```
+
 Luego abre `http://127.0.0.1:5000`.
+
+## Estructura del proyecto
+
+```text
+Veterinaria/
++-- app/
+|   +-- __init__.py
+|   +-- __main__.py
+|   +-- controllers/
+|   +-- models/
+|   +-- services/
+|   +-- static/
+|   +-- templates/
++-- resources/
++-- hospital_veterinario.db
++-- requirements.txt
++-- run.py
++-- README.md
+```
+
+### Archivos principales
+
+- `run.py`: punto de entrada alternativo para levantar la aplicacion Flask.
+- `app/__main__.py`: punto de entrada usado por `python -m app`.
+- `app/__init__.py`: crea la aplicacion Flask, registra los blueprints y protege las rutas privadas con `before_request`.
+- `hospital_veterinario.db`: base de datos SQLite donde se guardan los usuarios.
+- `requirements.txt`: dependencias del proyecto.
+
+## Arquitectura
+
+El proyecto esta organizado siguiendo una separacion simple por capas:
+
+- `models`: define las clases de dominio.
+- `services`: concentra reglas de negocio y acceso a datos.
+- `controllers`: define rutas HTTP mediante blueprints de Flask.
+- `templates`: contiene las pantallas HTML renderizadas con Jinja.
+- `static`: contiene recursos estaticos usados por la interfaz.
+
+El flujo general es:
+
+```text
+Navegador
+  -> Controller / Blueprint
+  -> Service
+  -> Repository o datos en memoria
+  -> Model
+  -> Template HTML
+```
+
+## Clases del dominio
+
+Las clases del dominio estan definidas como `dataclass`, por lo que funcionan como estructuras simples de datos.
+
+### `Appointment`
+
+Ubicacion: `app/models/appointment.py`
+
+Representa un turno veterinario.
+
+Campos:
+
+- `id`: identificador del turno.
+- `patient_name`: nombre del paciente.
+- `veterinarian`: profesional asignado.
+- `scheduled_at`: fecha y hora del turno.
+- `reason`: motivo de la consulta.
+
+### `Owner`
+
+Ubicacion: `app/models/owner.py`
+
+Representa al propietario de uno o mas pacientes.
+
+Campos:
+
+- `id`: identificador del propietario.
+- `name`: nombre completo.
+- `phone`: telefono de contacto.
+- `email`: correo electronico.
+
+### `Patient`
+
+Ubicacion: `app/models/patient.py`
+
+Representa a una mascota o paciente del hospital.
+
+Campos:
+
+- `id`: identificador del paciente.
+- `name`: nombre del paciente.
+- `species`: especie, por ejemplo canino o felino.
+- `breed`: raza.
+- `birth_date`: fecha de nacimiento.
+- `owner_name`: nombre del propietario asociado.
+
+### `User`
+
+Ubicacion: `app/models/user.py`
+
+Representa a un usuario del sistema.
+
+Campos:
+
+- `id`: identificador del usuario.
+- `username`: nombre de usuario para iniciar sesion.
+- `full_name`: nombre completo.
+- `role`: rol dentro del sistema.
+- `status`: estado del usuario, por ejemplo `Activo` o `Inactivo`.
+- `last_access`: fecha y hora del ultimo acceso.
+- `email`: correo electronico. Es opcional y por defecto queda vacio.
+
+## Servicios
+
+### `HospitalService`
+
+Ubicacion: `app/services/hospital_service.py`
+
+Es la capa de servicio principal de la aplicacion.
+
+Responsabilidades:
+
+- Inicializar datos de ejemplo para propietarios, pacientes y turnos.
+- Crear una instancia de `UserRepository`.
+- Construir el resumen del panel principal mediante `get_dashboard_summary()`.
+- Obtener usuarios mediante `get_users()`.
+
+Actualmente propietarios, pacientes y turnos se cargan en memoria. Los usuarios, en cambio, se leen desde SQLite a traves de `UserRepository`.
+
+### `UserRepository`
+
+Ubicacion: `app/services/user_repository.py`
+
+Administra la persistencia de usuarios en SQLite.
+
+Responsabilidades:
+
+- Crear y actualizar la tabla `users` si es necesario.
+- Cargar usuarios iniciales cuando la tabla esta vacia.
+- Listar, buscar, crear, actualizar y eliminar usuarios.
+- Autenticar usuarios activos por usuario o email.
+- Guardar contrasenas con hash usando Werkzeug.
+- Validar que `username` y `email` no se repitan.
+- Importar usuarios desde una base externa `Login/login/usuarios.db` si existe.
+
+Metodos principales:
+
+- `list_all()`: devuelve todos los usuarios.
+- `get_by_id(user_id)`: busca un usuario por identificador.
+- `create(...)`: crea un usuario nuevo.
+- `update(...)`: actualiza los datos editables de un usuario.
+- `delete(user_id)`: elimina un usuario.
+- `authenticate(login, password)`: valida credenciales y actualiza `last_access`.
+- `get_by_username_or_email(login)`: busca por usuario o email.
+
+## Controladores y rutas
+
+Los controladores usan `Blueprint` para separar las rutas por modulo.
+
+### `auth_controller.py`
+
+Blueprint: `auth`
+
+Rutas:
+
+- `GET /login`: muestra el formulario de inicio de sesion.
+- `POST /login`: valida credenciales, guarda datos del usuario en `session` y redirige al inicio.
+- `GET /registro`: muestra el formulario de registro.
+- `POST /registro`: valida los datos y crea un usuario administrativo activo.
+- `POST /logout`: cierra la sesion actual.
+
+Funciones auxiliares:
+
+- `validar_email(email)`: valida formato de email.
+- `validar_password(password)`: exige minimo 8 caracteres, mayuscula, minuscula y numero.
+
+### `main_controller.py`
+
+Blueprint: `main`
+
+Rutas:
+
+- `GET /`: muestra el panel principal con cantidad de propietarios, pacientes, turnos y usuarios.
+
+### `users_controller.py`
+
+Blueprint: `users`
+
+Prefijo: `/usuarios`
+
+Rutas:
+
+- `GET /usuarios/`: lista usuarios registrados.
+- `GET /usuarios/nuevo`: muestra formulario para crear usuario.
+- `GET /usuarios/editar/<user_id>`: muestra formulario para editar usuario.
+- `POST /usuarios/guardar`: crea o actualiza usuarios segun venga o no un `id`.
+- `POST /usuarios/eliminar/<user_id>`: elimina un usuario.
+
+## Plantillas
+
+Ubicacion: `app/templates/`
+
+- `base.html`: layout general, estilos, navegacion y mensajes flash.
+- `home.html`: panel principal con metricas, pacientes y proximos turnos.
+- `login.html`: formulario de inicio de sesion.
+- `register.html`: formulario de registro.
+- `users.html`: listado de usuarios y acciones.
+- `user_form.html`: formulario para crear o editar usuarios.
+
+## Seguridad y sesion
+
+La aplicacion configura `SECRET_KEY` en `app/__init__.py` para usar sesiones de Flask.
+
+Antes de cada request, `require_login()` valida que el usuario este autenticado. Solo quedan publicas estas rutas:
+
+- `auth.login`
+- `auth.register`
+- `static`
+
+Cuando el login es correcto, se guardan en sesion:
+
+- `user_id`
+- `user_name`
+- `user_role`
+
+## Base de datos
+
+La base principal es SQLite y se guarda en:
+
+```text
+hospital_veterinario.db
+```
+
+Tabla principal:
+
+```text
+users
+```
+
+Columnas:
+
+- `id`
+- `username`
+- `email`
+- `password_hash`
+- `full_name`
+- `role`
+- `status`
+- `last_access`
+
+Si la tabla esta vacia, se crean usuarios iniciales:
+
+- `admin`
+- `recepcion1`
+- `vetmartinez`
+- `admincont`
+
+## Recursos visuales
+
+Ubicaciones:
+
+- `resources/`: imagenes y archivos fuente del proyecto.
+- `app/static/resources/`: imagenes servidas por Flask para la interfaz web.
+
+Las plantillas usan estos recursos para el favicon, logo y banner de la aplicacion.
