@@ -11,3 +11,4 @@ class User:
     status: str
     last_access: datetime
     email: str = ""
+    role_id: int | None = None

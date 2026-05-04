@@ -4,7 +4,7 @@
 <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
   <div>
     <div class="section-title" style="margin:0;">{{ title }}</div>
-    <div class="muted">Carga y actualización de usuarios del sistema</div>
+    <div class="muted">Carga y actualizacion de usuarios del sistema</div>
   </div>
   <a href="{{ url_for('users.index') }}" class="button secondary">Volver</a>
 </div>
@@ -17,18 +17,14 @@
         <div class="muted" style="margin-bottom:0.35rem;">Usuario</div>
         <input name="username" required value="{{ user.username if user else '' }}">
       </label>
-      <label>
-        <div class="muted" style="margin-bottom:0.35rem;">Email</div>
-        <input name="email" type="email" value="{{ user.email if user else '' }}">
-      </label>
       {% if not user %}
       <label>
-        <div class="muted" style="margin-bottom:0.35rem;">Contraseña</div>
+        <div class="muted" style="margin-bottom:0.35rem;">Contrasena</div>
         <input type="password" name="password" required>
       </label>
       {% else %}
       <div class="card" style="padding:0.85rem 1rem; background:var(--surface-tint);">
-        <div class="muted">Contraseña protegida</div>
+        <div class="muted">Contrasena protegida</div>
         <div style="margin-top:0.25rem;">No se muestra por seguridad. Solo se conserva su valor cifrado.</div>
       </div>
       {% endif %}
@@ -51,10 +47,6 @@
           <option value="Activo" {% if user and user.status == 'Activo' %}selected{% endif %}>Activo</option>
           <option value="Inactivo" {% if user and user.status == 'Inactivo' %}selected{% endif %}>Inactivo</option>
         </select>
-      </label>
-      <label>
-        <div class="muted" style="margin-bottom:0.35rem;">Último acceso</div>
-        <input type="datetime-local" name="last_access" required value="{{ user.last_access.strftime('%Y-%m-%dT%H:%M') if user else '' }}">
       </label>
     </div>
     <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">

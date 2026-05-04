@@ -138,6 +138,95 @@ Campos:
 - `status`: estado del usuario, por ejemplo `Activo` o `Inactivo`.
 - `last_access`: fecha y hora del ultimo acceso.
 - `email`: correo electronico. Es opcional y por defecto queda vacio.
+- `role_id`: identificador opcional del rol asociado.
+
+### `Rol`
+
+Ubicacion: `app/models/rol.py`
+
+Representa un perfil de acceso dentro del sistema.
+
+Campos:
+
+- `id`: identificador del rol.
+- `nombre`: nombre del rol, por ejemplo Administrador, Recepcionista o Veterinario.
+- `descripcion`: detalle del alcance del rol.
+- `estado`: indica si el rol esta activo.
+
+### `Cliente`
+
+Ubicacion: `app/models/cliente.py`
+
+Representa al propietario o responsable de uno o mas pacientes.
+
+Campos:
+
+- `id`: identificador del cliente.
+- `nombre`: nombre.
+- `apellido`: apellido.
+- `dni`: documento del cliente.
+- `telefono`: telefono de contacto.
+- `email`: correo electronico.
+- `direccion`: domicilio.
+- `fecha_alta`: fecha de alta en el sistema.
+- `estado`: indica si el cliente esta activo.
+
+### `Paciente`
+
+Ubicacion: `app/models/paciente.py`
+
+Representa a una mascota asociada a un cliente.
+
+Campos:
+
+- `id`: identificador del paciente.
+- `cliente_id`: identificador del cliente responsable.
+- `nombre`: nombre del paciente.
+- `especie`: especie, por ejemplo canino o felino.
+- `raza`: raza.
+- `sexo`: sexo del paciente.
+- `fecha_nacimiento`: fecha de nacimiento.
+- `peso`: peso del paciente.
+- `color`: color o descripcion visual.
+- `estado`: indica si el paciente esta activo.
+
+### `Veterinario`
+
+Ubicacion: `app/models/veterinario.py`
+
+Representa al profesional veterinario que realiza atenciones medicas.
+
+Campos:
+
+- `id`: identificador del veterinario.
+- `nombre`: nombre.
+- `apellido`: apellido.
+- `matricula`: matricula profesional.
+- `telefono`: telefono de contacto.
+- `email`: correo electronico.
+- `estado`: indica si el veterinario esta activo.
+- `user_id`: identificador opcional del usuario asociado.
+
+El veterinario se modela como una entidad distinta a `User` porque tiene datos profesionales propios, como matricula y datos de contacto. Si el veterinario necesita iniciar sesion, se vincula con un usuario mediante `user_id`.
+
+### `Atencion`
+
+Ubicacion: `app/models/atencion.py`
+
+Representa una consulta o atencion medica realizada a un paciente.
+
+Campos:
+
+- `id`: identificador de la atencion.
+- `paciente_id`: identificador del paciente atendido.
+- `veterinario_id`: identificador del veterinario responsable.
+- `fecha_hora`: fecha y hora de la atencion.
+- `motivo_consulta`: motivo inicial de consulta.
+- `sintomas`: sintomas observados o informados.
+- `diagnostico`: diagnostico registrado.
+- `tratamiento`: tratamiento indicado.
+- `observaciones`: notas adicionales.
+- `estado`: estado de la atencion.
 
 ## Servicios
 

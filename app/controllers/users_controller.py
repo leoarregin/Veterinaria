@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.services.hospital_service import HospitalService
@@ -31,21 +33,27 @@ def edit(user_id: int):
 def save():
     user_id = request.form.get("id", type=int)
     username = request.form["username"].strip()
-    email = request.form.get("email", "").strip().lower()
     password = request.form.get("password", "").strip()
     full_name = request.form["full_name"].strip()
     role = request.form["role"].strip()
     status = request.form["status"].strip()
-    last_access = request.form["last_access"].strip()
 
     try:
         if user_id:
+            user = service.user_repository.get_by_id(user_id)
+            if user is None:
+                flash("El usuario solicitado no existe.", "error")
+                return redirect(url_for("users.index"))
+            email = user.email
+            last_access = user.last_access.isoformat(timespec="minutes")
             service.user_repository.update(user_id, username, full_name, role, status, last_access, email)
             flash("Usuario actualizado correctamente.", "success")
         else:
             if not password:
                 flash("La contrasena es obligatoria para crear un usuario.", "error")
                 return redirect(url_for("users.new"))
+            email = ""
+            last_access = datetime.now().isoformat(timespec="minutes")
             service.user_repository.create(username, password, full_name, role, status, last_access, email)
             flash("Usuario creado correctamente.", "success")
     except Exception as exc:
