@@ -1,37 +1,58 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
-from app.models.appointment import Appointment
-from app.models.owner import Owner
-from app.models.patient import Patient
 from app.models.user import User
+from app.services.paciente_repository import PacienteRepository
+from app.services.turno_repository import TurnoRepository
 from app.services.user_repository import UserRepository
 
 
 class HospitalService:
     def __init__(self) -> None:
-        self.owners = [
-            Owner(1, "Ana Lopez", "11-5555-1234", "ana@example.com"),
-            Owner(2, "Carlos Perez", "11-5555-5678", "carlos@example.com"),
-        ]
-        self.patients = [
-            Patient(1, "Luna", "Canino", "Labrador", date(2020, 4, 12), "Ana Lopez"),
-            Patient(2, "Milo", "Felino", "Europeo", date(2021, 9, 3), "Carlos Perez"),
-        ]
-        self.appointments = [
-            Appointment(1, "Luna", "Dra. Martinez", datetime.now() + timedelta(hours=2), "Vacunacion"),
-            Appointment(2, "Milo", "Dr. Gomez", datetime.now() + timedelta(days=1), "Control general"),
-        ]
-        self.user_repository = UserRepository()
+        self.user_repository     = UserRepository()
+        self.paciente_repository = PacienteRepository()
+        self.turno_repository    = TurnoRepository()
+
+    # ── dashboard ─────────────────────────────────────────────
 
     def get_dashboard_summary(self) -> dict:
+        pacientes = self.paciente_repository.list_all()
+        turnos    = self.turno_repository.get_turnos_hoy()
         return {
-            "owners_count": len(self.owners),
-            "patients_count": len(self.patients),
-            "appointments_count": len(self.appointments),
-            "users_count": len(self.get_users()),
-            "patients": self.patients,
-            "appointments": self.appointments,
+            "patients_count":      len(pacientes),
+            "appointments_count":  len(turnos),
+            "users_count":         len(self.get_users()),
+            "patients":            pacientes,
+            "appointments":        turnos,
         }
+
+    # ── usuarios ──────────────────────────────────────────────
 
     def get_users(self) -> list[User]:
         return self.user_repository.list_all()
+
+    # ── turnos ────────────────────────────────────────────────
+
+    def get_turnos_hoy(self, veterinario_id: int | None = None) -> list[dict]:
+        return self.turno_repository.get_turnos_hoy(veterinario_id)
+
+    def get_turno_by_id(self, turno_id: int) -> dict | None:
+        return self.turno_repository.get_by_id(turno_id)
+
+    def marcar_presente(self, turno_id: int) -> None:
+        self.turno_repository.marcar_presente(turno_id)
+
+    def cancelar_turno(self, turno_id: int) -> None:
+        self.turno_repository.cancelar(turno_id)
+
+    # ── pacientes ─────────────────────────────────────────────
+
+    def get_paciente_info(self, paciente_id: int) -> dict | None:
+        return self.paciente_repository.get_info_completa(paciente_id)
+
+    # ── atenciones ────────────────────────────────────────────
+
+    def get_historial(self, mascota_id: int) -> list[dict]:
+        return self.turno_repository.get_historial(mascota_id)
+
+    def guardar_atencion(self, data: dict) -> int:
+        return self.turno_repository.guardar_atencion(data)

@@ -12,6 +12,7 @@ class Paciente:
     raza: str
     sexo: str
     fecha_nacimiento: date
-    peso: Decimal
+    peso_kg: Decimal
     color: str
-    estado: bool = True
+    castrado: int = 0
+    estado: int = 1

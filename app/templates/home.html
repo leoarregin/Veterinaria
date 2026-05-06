@@ -3,15 +3,11 @@
 {% block content %}
 <div class="grid">
   <div class="card">
-    <div class="muted">Propietarios</div>
-    <div class="metric">{{ summary.owners_count }}</div>
-  </div>
-  <div class="card">
     <div class="muted">Pacientes</div>
     <div class="metric">{{ summary.patients_count }}</div>
   </div>
   <div class="card">
-    <div class="muted">Turnos</div>
+    <div class="muted">Turnos hoy</div>
     <div class="metric">{{ summary.appointments_count }}</div>
   </div>
   <div class="card">
@@ -22,19 +18,36 @@
 
 <div class="section-title">Pacientes registrados</div>
 <div class="card">
+  {% if summary.patients %}
   <ul>
-    {% for patient in summary.patients %}
-      <li>{{ patient.name }} - {{ patient.species }} {{ patient.breed }} - Dueño: {{ patient.owner_name }}</li>
+    {% for p in summary.patients %}
+      <li>
+        <strong>{{ p.nombre }}</strong> —
+        {{ p.especie }}{{ ' ' + p.raza if p.raza else '' }} —
+        Dueño: {{ p.propietario }}
+      </li>
     {% endfor %}
   </ul>
+  {% else %}
+    <p class="muted">Sin pacientes registrados.</p>
+  {% endif %}
 </div>
 
-<div class="section-title">Próximos turnos</div>
+<div class="section-title">Turnos de hoy</div>
 <div class="card">
+  {% if summary.appointments %}
   <ul>
-    {% for appointment in summary.appointments %}
-      <li>{{ appointment.patient_name }} con {{ appointment.veterinarian }} - {{ appointment.scheduled_at.strftime("%d/%m/%Y %H:%M") }} - {{ appointment.reason }}</li>
+    {% for t in summary.appointments %}
+      <li>
+        <strong>{{ t.mascota }}</strong> con {{ t.veterinario }} —
+        {{ t.fecha_hora[11:16] }} —
+        {{ t.motivo or 'Sin motivo' }}
+        <span class="muted">({{ t.estado }})</span>
+      </li>
     {% endfor %}
   </ul>
+  {% else %}
+    <p class="muted">Sin turnos para hoy.</p>
+  {% endif %}
 </div>
 {% endblock %}

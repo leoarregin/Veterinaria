@@ -21,6 +21,11 @@
         --danger: #b42318;
         --danger-bg: #fff1f0;
         --success-bg: #E6F2EC;
+        --accent: var(--primary);
+        --success: #2d6a4f;
+        --text-muted: var(--muted);
+        --surface-2: #f2f4f7;
+        --text: var(--ink);
       }
       * { box-sizing: border-box; }
       body {
@@ -261,6 +266,35 @@
         display: grid;
         gap: 0.85rem;
       }
+      .badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .badge-presente  { background: #e6f2ec; color: #2d6a4f; }
+      .badge-confirmado{ background: #e8f4fd; color: #1a6fa8; }
+      .badge-pendiente { background: #fef9e7; color: #9a6e00; }
+      .badge-atendido  { background: #f2f4f7; color: #6b7280; }
+      .badge-cancelado { background: #fff1f0; color: #b42318; }
+      .badge-ausente   { background: #fff1f0; color: #b42318; }
+      .badge-especie   { background: var(--surface-tint); color: var(--primary-dark); }
+      textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--ink);
+        background: white;
+        font: inherit;
+        resize: vertical;
+      }
+      textarea:focus {
+        outline: 3px solid rgba(106, 165, 141, 0.22);
+        border-color: var(--primary);
+      }
     </style>
   </head>
   <body class="{% block body_class %}{% endblock %}">
@@ -277,13 +311,26 @@
           </div>
           <img class="hero-banner" src="{{ url_for('static', filename='resources/Banner.png') }}" alt="Soulvetia">
         </div>
-        <nav class="nav">
+        {#<nav class="nav">
           <a href="/">Inicio</a>
           <a href="/usuarios/">Usuarios</a>
           {% if session.user_id %}
           <form class="nav-form" method="post" action="{{ url_for('auth.logout') }}">
             <button type="submit">Cerrar sesion</button>
           </form>
+          {% endif %}
+        </nav> #}
+        <nav class="nav">
+          <a href="/">Inicio</a>
+          <a href="/usuarios/">Usuarios</a>
+          {% if session.user_id %}
+            <a href="{{ url_for('dashboard.index') }}">Agenda del día</a>
+            {% if session.rol in ('Veterinario', 'Administrador') %}
+              {# este aparece solo cuando se navega a un turno específico #}
+            {% endif %}
+            <form class="nav-form" method="post" action="{{ url_for('auth.logout') }}">
+              <button type="submit">Cerrar sesión</button>
+            </form>
           {% endif %}
         </nav>
       </div>

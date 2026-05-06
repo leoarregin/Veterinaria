@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="hospital_veterinario.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="3096"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="sqlite_sequence" custom_title="0" dock_id="1" table="4,15:mainsqlite_sequence"/><dock_state state="000000ff00000000fd00000001000000020000000000000000fc0100000001fb000000160064006f0063006b00420072006f00770073006500310100000000ffffffff0000011e00ffffff000000000000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 1*">CREATE TABLE IF NOT EXISTS cliente (
+            id          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            nombre      TEXT    NOT NULL,
+            apellido    TEXT    NOT NULL,
+            dni         TEXT    UNIQUE,
+            telefono    TEXT,
+            email       TEXT,
+            direccion   TEXT,
+            estado      INTEGER NOT NULL DEFAULT 1,
+            fecha_alta  TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
+        );
+
+        CREATE TABLE IF NOT EXISTS paciente (
+            id          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            cliente_id  INTEGER NOT NULL,
+            nombre      TEXT    NOT NULL,
+            especie     TEXT    NOT NULL,
+            raza        TEXT,
+            sexo        TEXT    NOT NULL DEFAULT 'desconocido'
+                                CHECK (sexo IN ('M','F','desconocido')),
+            fecha_nacimiento   TEXT,
+            peso_kg     REAL,
+            color       TEXT,
+            castrado    INTEGER NOT NULL DEFAULT 0,
+            estado      INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (cliente_id) REFERENCES cliente(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS turno (
+            id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            paciente_id          INTEGER NOT NULL,
+            veterinario_id      INTEGER NOT NULL,
+            recepcionista_id    INTEGER NOT NULL DEFAULT 1,
+            fecha_hora          TEXT    NOT NULL,
+            estado              TEXT    NOT NULL DEFAULT 'pendiente'
+                                CHECK (estado IN ('pendiente','confirmado','presente',
+                                                   'atendido','cancelado','ausente')),
+            motivo              TEXT,
+            FOREIGN KEY (paciente_id)       REFERENCES paciente(id),
+            FOREIGN KEY (veterinario_id)   REFERENCES users(id),
+            FOREIGN KEY (recepcionista_id) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS atencion (
+            id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            turno_id        INTEGER,
+            paciente_id      INTEGER NOT NULL,
+            veterinario_id  INTEGER NOT NULL,
+            fecha_hora      TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+            anamnesis       TEXT,
+            examen_fisico   TEXT,
+            diagnostico     TEXT,
+            tratamiento     TEXT,
+            observaciones   TEXT,
+           
+            FOREIGN KEY (turno_id)       REFERENCES turno(id),
+            FOREIGN KEY (paciente_id)     REFERENCES paciente(id),
+            FOREIGN KEY (veterinario_id) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS medicacion (
+            id            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            atencion_id   INTEGER NOT NULL,
+            medicamento   TEXT    NOT NULL,
+            dosis         TEXT,
+            via           TEXT,
+            frecuencia    TEXT,
+            duracion_dias INTEGER,
+            FOREIGN KEY (atencion_id) REFERENCES atencion(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS estudio (
+            id          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            atencion_id INTEGER NOT NULL,
+            tipo        TEXT    NOT NULL,
+            descripcion TEXT,
+            resultado   TEXT,
+            fecha       TEXT    NOT NULL,
+            FOREIGN KEY (atencion_id) REFERENCES atencion(id) ON DELETE CASCADE
+        );</sql><sql name="SQL 2"></sql><current_tab id="0"/></tab_sql></sqlb_project>
