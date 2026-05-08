@@ -81,7 +81,7 @@ Navegador
 
 Las clases del dominio estan definidas como `dataclass`, por lo que funcionan como estructuras simples de datos.
 
-### `Appointment`
+### `Appointment` ES TURNO?
 
 Ubicacion: `app/models/appointment.py`
 
@@ -95,9 +95,9 @@ Campos:
 - `scheduled_at`: fecha y hora del turno.
 - `reason`: motivo de la consulta.
 
-### `Owner`
+### `Owner` ES CLIENTE?
 
-Ubicacion: `app/models/owner.py`
+Ubicacion: `app/models/owner.py` 
 
 Representa al propietario de uno o mas pacientes.
 
@@ -108,7 +108,7 @@ Campos:
 - `phone`: telefono de contacto.
 - `email`: correo electronico.
 
-### `Patient`
+### `Patient` ES PACIENTE?
 
 Ubicacion: `app/models/patient.py`
 
@@ -168,8 +168,8 @@ Campos:
 - `telefono`: telefono de contacto.
 - `email`: correo electronico.
 - `direccion`: domicilio.
-- `fecha_alta`: fecha de alta en el sistema.
 - `estado`: indica si el cliente esta activo.
+- `fecha_alta`: fecha de alta en el sistema.
 
 ### `Paciente`
 
@@ -185,9 +185,10 @@ Campos:
 - `especie`: especie, por ejemplo canino o felino.
 - `raza`: raza.
 - `sexo`: sexo del paciente.
+- `peso_kg`: peso del paciente.
 - `fecha_nacimiento`: fecha de nacimiento.
-- `peso`: peso del paciente.
 - `color`: color o descripcion visual.
+- `castrado`: verificacion de castracion del animal.
 - `estado`: indica si el paciente esta activo.
 
 ### `Veterinario`
@@ -218,15 +219,26 @@ Representa una consulta o atencion medica realizada a un paciente.
 Campos:
 
 - `id`: identificador de la atencion.
+- `turno_id`: identificacion del turno solicitado previamente.
 - `paciente_id`: identificador del paciente atendido.
 - `veterinario_id`: identificador del veterinario responsable.
 - `fecha_hora`: fecha y hora de la atencion.
-- `motivo_consulta`: motivo inicial de consulta.
-- `sintomas`: sintomas observados o informados.
+- `anamnesis`:
+- `examen_fisico`:
 - `diagnostico`: diagnostico registrado.
 - `tratamiento`: tratamiento indicado.
 - `observaciones`: notas adicionales.
-- `estado`: estado de la atencion.
+distintas constantes corporales
+- `temperatura_c`: temperatura corporal
+- `peso_consulta_kg`: peso al momento de la consulta
+- `fc_rpm`: frecuencia cardiaca
+- `fr_rpm`: frecuencia respiratoria
+- `trc_seg`: Tiempo de Relleno Capilar en segundos
+- `mucosas`: apariencia de las mucosas 
+- `condicion_corporal`: evaluacion del estado del cuerpo
+- `dolor`: consideracion del sensaciones de dolor del animal
+
+### Medicacion
 
 ## Servicios
 
