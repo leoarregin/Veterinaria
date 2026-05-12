@@ -28,7 +28,7 @@ class TurnoRepository:
                     fecha_hora          TEXT    NOT NULL,
                     estado              TEXT    NOT NULL DEFAULT 'pendiente'
                                         CHECK (estado IN ('pendiente','confirmado','presente',
-                                                           'atendido','cancelado','ausente')),
+                                                           'atendido','cancelado','ausente',urgente)),
                     motivo              TEXT,
                     created_at          TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
                     FOREIGN KEY (paciente_id)      REFERENCES paciente(id),
@@ -141,6 +141,20 @@ class TurnoRepository:
                 "UPDATE turno SET estado = 'cancelado' WHERE id = ?",
                 (turno_id,)
             )
+     
+    def crear_turno_urgente(self, mascota_id: int, veterinario_id: int,
+                            recepcionista_id: int, motivo: str = "") -> int:
+        """Crea un turno urgente con la hora actual."""
+        from datetime import datetime
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self._connect() as conn:
+            cur = conn.execute("""
+                INSERT INTO turno
+                    (paciente_id, veterinario_id, recepcionista_id,
+                    fecha_hora, estado, motivo)
+                VALUES (?,?,?,?,'urgente',?)
+            """, (mascota_id, veterinario_id, recepcionista_id, ahora, motivo))
+            return cur.lastrowid
 
     # ── atenciones ────────────────────────────────────────────
 
