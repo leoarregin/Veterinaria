@@ -44,6 +44,11 @@ class HospitalService:
     def cancelar_turno(self, turno_id: int) -> None:
         self.turno_repository.cancelar(turno_id)
 
+    def crear_turno_urgente(self, mascota_id: int, veterinario_id: int,
+                         recepcionista_id: int, motivo: str = "") -> int:
+        return self.turno_repository.crear_turno_urgente(
+        mascota_id, veterinario_id, recepcionista_id, motivo)
+
     # ── pacientes ─────────────────────────────────────────────
 
     def get_paciente_info(self, paciente_id: int) -> dict | None:
