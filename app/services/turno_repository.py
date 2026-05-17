@@ -30,6 +30,7 @@ class TurnoRepository:
                                         CHECK (estado IN ('pendiente','confirmado','presente',
                                                            'atendido','cancelado','ausente')),
                     motivo              TEXT,
+                    urgencia            TEXT    NOT NULL DEFAULT 'normal',
                     created_at          TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
                     FOREIGN KEY (paciente_id)      REFERENCES paciente(id),
                     FOREIGN KEY (veterinario_id)   REFERENCES users(id),
@@ -48,6 +49,14 @@ class TurnoRepository:
                     tratamiento     TEXT,
                     observaciones   TEXT,
                     monto           REAL    NOT NULL DEFAULT 0.0,
+                    temperatura_c   REAL,
+                    peso_consulta_kg REAL,
+                    fc_rpm           REAL,
+                    fr_rpm           REAL,
+                    trc_seg          REAL,
+                    mucosas          TEXT,
+                    condicion_corporal TEXT,
+                    dolor            TEXT,
                     FOREIGN KEY (turno_id)       REFERENCES turno(id),
                     FOREIGN KEY (paciente_id)    REFERENCES paciente(id),
                     FOREIGN KEY (veterinario_id) REFERENCES users(id)
@@ -74,13 +83,16 @@ class TurnoRepository:
                     FOREIGN KEY (atencion_id) REFERENCES atencion(id) ON DELETE CASCADE
                 );
             """)
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(turno)").fetchall()}
+            if "urgencia" not in columns:
+                conn.execute("ALTER TABLE turno ADD COLUMN urgencia TEXT NOT NULL DEFAULT 'normal'")
 
     # ── turnos ────────────────────────────────────────────────
 
     def get_turnos_hoy(self, veterinario_id: int | None = None) -> list[dict]:
         hoy = date.today().isoformat()
         query = """
-            SELECT t.id, t.fecha_hora, t.estado, t.motivo,
+            SELECT t.id, t.fecha_hora, t.estado, t.motivo, t.urgencia,
                    p.id AS paciente_id, p.nombre AS mascota,
                    p.especie, p.raza, p.peso_kg, p.sexo, p.fecha_nacimiento AS fecha_nac,
                    c.nombre || ' ' || c.apellido AS propietario,
@@ -97,7 +109,7 @@ class TurnoRepository:
         if veterinario_id:
             query += " AND t.veterinario_id = ?"
             params.append(veterinario_id)
-        query += " ORDER BY t.fecha_hora"
+        query += " ORDER BY CASE t.urgencia WHEN 'emergencia' THEN 1 WHEN 'urgente' THEN 2 ELSE 3 END, t.fecha_hora"
 
         with self._connect() as conn:
             rows = conn.execute(query, params).fetchall()
@@ -106,7 +118,7 @@ class TurnoRepository:
     def get_by_id(self, turno_id: int) -> dict | None:
         with self._connect() as conn:
             row = conn.execute("""
-                SELECT t.id, t.fecha_hora, t.estado, t.motivo,
+                SELECT t.id, t.fecha_hora, t.estado, t.motivo, t.urgencia,
                        p.id AS paciente_id, p.nombre AS mascota,
                        p.especie, p.raza, p.peso_kg, p.sexo, p.fecha_nacimiento AS fecha_nac,
                        c.nombre || ' ' || c.apellido AS propietario,
@@ -120,6 +132,27 @@ class TurnoRepository:
                 WHERE t.id = ?
             """, (turno_id,)).fetchone()
         return dict(row) if row else None
+
+    def create_turno(
+        self,
+        paciente_id: int,
+        veterinario_id: int,
+        recepcionista_id: int,
+        fecha_hora: str,
+        motivo: str,
+        urgencia: str = 'normal',
+    ) -> int:
+        with self._connect() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO turno
+                    (paciente_id, veterinario_id, recepcionista_id,
+                     fecha_hora, estado, motivo, urgencia)
+                VALUES (?, ?, ?, ?, 'confirmado', ?, ?)
+                """,
+                (paciente_id, veterinario_id, recepcionista_id, fecha_hora, motivo.strip(), urgencia),
+            )
+        return cur.lastrowid
 
     def marcar_presente(self, turno_id: int) -> None:
         with self._connect() as conn:

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="section-title">Nuevo turno</div>
+
+<form method="get" action="{{ url_for('turnos.nuevo') }}" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem;">
+  <input name="q" placeholder="Buscar por cliente, mascota, DNI o teléfono" value="{{ search_term }}" autocomplete="off" style="flex:1; min-width:220px;">
+  <button type="submit" class="button">Buscar</button>
+  <a href="{{ url_for('turnos.registrar') }}" class="button secondary" style="white-space:nowrap;">Registrar cliente</a>
+  <a href="{{ url_for('turnos.registrar_mascota') }}" class="button secondary" style="white-space:nowrap;">Registrar mascota</a>
+</form>
+
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('turnos.nuevo') }}">
+  <input type="hidden" name="q" value="{{ form.q }}">
+
+  {% if pacientes %}
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="section-title" style="margin:0 0 0.75rem;">Pacientes encontrados</div>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Seleccionar</th>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Mascota</th>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Propietario</th>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Especie</th>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Contacto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pacientes %}
+        <tr>
+          <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+            <input type="radio" name="paciente_id" value="{{ p.paciente_id }}" {% if form.paciente_id == p.paciente_id|string %}checked{% endif %}>
+          </td>
+          <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+            <strong>{{ p.mascota }}</strong>
+          </td>
+          <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+            {{ p.propietario }}
+          </td>
+          <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+            {{ p.especie }} · {{ p.raza or '—' }}
+          </td>
+          <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+            {{ p.telefono or p.email_cliente or '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="section-title" style="margin:0 0 0.75rem;">Datos del turno</div>
+    <div style="display:grid; gap:1rem;">
+      <div style="display:grid; gap:0.5rem;">
+        <label>Fecha y hora</label>
+        <input type="datetime-local" name="fecha_hora" value="{{ form.fecha_hora }}">
+      </div>
+      <div style="display:grid; gap:0.5rem;">
+        <label>Veterinario</label>
+        <select name="veterinario_id">
+          <option value="">Seleccionar veterinario</option>
+          {% for vet in veterinarios %}
+          <option value="{{ vet.id }}" {% if form.veterinario_id == vet.id|string %}selected{% endif %}>{{ vet.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:grid; gap:0.5rem;">
+        <label>Urgencia</label>
+        <select name="urgencia">
+          {% for value, label in urgencias %}
+          <option value="{{ value }}" {% if form.urgencia == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:grid; gap:0.5rem;">
+        <label>Motivo</label>
+        <input type="text" name="motivo" value="{{ form.motivo }}" placeholder="Ej. control, vacunación, problema digestivo">
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="button">Guardar turno</button>
+</form>
+{% endblock %}

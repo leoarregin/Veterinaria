@@ -63,6 +63,14 @@ class UserRepository:
             rows = conn.execute("SELECT * FROM users ORDER BY id").fetchall()
         return [self._row_to_user(row) for row in rows]
 
+    def list_by_role(self, role: str) -> list[User]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM users WHERE lower(role) = lower(?) AND lower(status) = 'activo' ORDER BY full_name",
+                (role,),
+            ).fetchall()
+        return [self._row_to_user(row) for row in rows]
+
     def get_by_id(self, user_id: int) -> User | None:
         with self._connect() as conn:
             row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()

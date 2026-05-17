@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+  <div>
+    <div class="section-title" style="margin:0;">Registrar mascota</div>
+    <div class="muted">Busca un cliente válido y luego registra la nueva mascota para ese cliente.</div>
+  </div>
+  <a href="{{ url_for('turnos.nuevo') }}" class="button secondary">Volver a nuevo turno</a>
+</div>
+
+<form method="get" action="{{ url_for('turnos.registrar_mascota') }}" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem;">
+  <input name="q" placeholder="Buscar cliente por nombre, apellido, DNI o teléfono" value="{{ form.q }}" autocomplete="off" style="flex:1; min-width:220px;">
+  <button type="submit" class="button">Buscar cliente</button>
+</form>
+
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('turnos.registrar_mascota') }}">
+  <input type="hidden" name="q" value="{{ form.q }}">
+
+  {% if clientes %}
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="section-title" style="margin:0 0 0.75rem;">Clientes encontrados</div>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Seleccionar</th>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Cliente</th>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">DNI</th>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Contacto</th>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Mascotas</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in clientes %}
+        <tr>
+          <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+            <input type="radio" name="cliente_id" value="{{ c.cliente_id }}" {% if form.cliente_id == c.cliente_id|string %}checked{% endif %}>
+          </td>
+          <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+            <strong>{{ c.propietario }}</strong>
+          </td>
+          <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+            {{ c.dni or '—' }}
+          </td>
+          <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+            {{ c.telefono or c.email or '—' }}
+          </td>
+          <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+            {{ c.mascotas }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="section-title" style="margin:0 0 0.75rem;">Datos de la mascota</div>
+    <div style="display:grid; gap:1rem;">
+      <div style="display:grid; gap:0.5rem;">
+        <label>Nombre mascota</label>
+        <input type="text" name="paciente_nombre" value="{{ form.paciente_nombre }}">
+      </div>
+      <div style="display:grid; gap:0.5rem;">
+        <label>Especie</label>
+        <input type="text" name="paciente_especie" value="{{ form.paciente_especie }}">
+      </div>
+      <div style="display:grid; gap:0.5rem;">
+        <label>Raza</label>
+        <input type="text" name="paciente_raza" value="{{ form.paciente_raza }}">
+      </div>
+      <div style="display:grid; gap:0.5rem;">
+        <label>Sexo</label>
+        <select name="paciente_sexo">
+          <option value="M" {% if form.paciente_sexo == 'M' %}selected{% endif %}>Macho</option>
+          <option value="F" {% if form.paciente_sexo == 'F' %}selected{% endif %}>Hembra</option>
+          <option value="desconocido" {% if form.paciente_sexo == 'desconocido' %}selected{% endif %}>Desconocido</option>
+        </select>
+      </div>
+      <div style="display:grid; gap:0.5rem;">
+        <label>Fecha de nacimiento</label>
+        <input type="date" name="paciente_fecha_nacimiento" value="{{ form.paciente_fecha_nacimiento }}">
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="button">Guardar mascota</button>
+</form>
+{% endblock %}

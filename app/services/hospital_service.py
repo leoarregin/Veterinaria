@@ -38,6 +38,57 @@ class HospitalService:
     def get_turno_by_id(self, turno_id: int) -> dict | None:
         return self.turno_repository.get_by_id(turno_id)
 
+    def get_veterinarios(self) -> list[User]:
+        return self.user_repository.list_by_role("Veterinario")
+
+    def search_pacientes(self, term: str) -> list[dict]:
+        return self.paciente_repository.search(term)
+
+    # 2026-05-08 leo arregin / gonza arregin: busca clientes para registro de mascota existente
+    def search_clientes(self, term: str) -> list[dict]:
+        return self.paciente_repository.search_clientes(term)
+
+    def crear_cliente(
+        self,
+        nombre: str,
+        apellido: str,
+        dni: str,
+        telefono: str,
+        email: str,
+        direccion: str,
+    ) -> int:
+        return self.paciente_repository.create_cliente(
+            nombre, apellido, dni, telefono, email, direccion
+        )
+
+    def crear_paciente(
+        self,
+        cliente_id: int,
+        nombre: str,
+        especie: str,
+        raza: str,
+        fecha_nacimiento: str | None,
+        sexo: str,
+    ) -> int:
+        return self.paciente_repository.create_paciente(
+            cliente_id,
+            nombre,
+            especie,
+            raza,
+            fecha_nacimiento,
+            sexo,
+        )
+
+    def crear_turno(self, data: dict) -> int:
+        return self.turno_repository.create_turno(
+            paciente_id=int(data["paciente_id"]),
+            veterinario_id=int(data["veterinario_id"]),
+            recepcionista_id=int(data.get("recepcionista_id") or 1),
+            fecha_hora=data["fecha_hora"],
+            motivo=data.get("motivo", ""),
+            urgencia=data.get("urgencia", "normal") or "normal",
+        )
+
     def marcar_presente(self, turno_id: int) -> None:
         self.turno_repository.marcar_presente(turno_id)
 

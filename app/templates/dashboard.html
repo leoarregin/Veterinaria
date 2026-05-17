@@ -28,10 +28,7 @@
   <div class="section-title" style="margin:0;">
     Agenda del día — {{ hoy }}
   </div>
-  <div style="display:flex; gap:0.5rem; align-items:center;">
-    {% if current_user.user_role in ("Administrador", "Recepcionista") %}
-       {#<a href="{{ url_for('turnos.new') }}" class="button">+ Nuevo turno</a> #}
-    {% endif %}
+  <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
     <a href="{{ url_for('dashboard.index') }}" class="button" style="background:transparent;
        border:1px solid var(--border); color:var(--text-muted);">↺ Actualizar</a>
   </div>
@@ -54,6 +51,7 @@
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Motivo</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Veterinario</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Estado</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Prioridad</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Acciones</th>
       </tr>
     </thead>
@@ -84,6 +82,9 @@
         <td style="padding:0.75rem; border-bottom:1px solid var(--border); vertical-align:middle;">
           <span class="badge badge-presente">presente</span>
         </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted); vertical-align:middle;">
+          {{ t.urgencia | capitalize }}
+        </td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border); vertical-align:middle;">
           {% if current_user.user_role in ("Veterinario", "Administrador") %}
             <a href="{{ url_for('turnos.atender', turno_id=t.id) }}" class="button">Atender</a>
@@ -111,6 +112,7 @@
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Motivo</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Veterinario</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Estado</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Prioridad</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Acciones</th>
       </tr>
     </thead>
@@ -140,6 +142,9 @@
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
           <span class="badge badge-{{ t.estado }}">{{ t.estado }}</span>
         </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+          {{ t.urgencia | capitalize }}
+        </td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border); display:flex; gap:0.5rem; flex-wrap:wrap;">
           {% if current_user.user_role in ("Recepcionista", "Administrador") %}
             <form method="post"
@@ -147,14 +152,13 @@
                   style="margin:0;">
               <button type="submit" class="link">Marcar presente</button>
             </form>
+            <form method="post"
+                  action="{{ url_for('turnos.cancelar', turno_id=t.id) }}"
+                  onsubmit="return confirm('¿Cancelar este turno?');"
+                  style="margin:0;">
+              <button type="submit" class="danger-link">Cancelar</button>
+            </form>
           {% endif %}
-          {#<a href="{{ url_for('turnos.edit', turno_id=t.id) }}" class="link">Editar</a>
-          <form method="post"
-                action="{{ url_for('turnos.cancelar', turno_id=t.id) }}"
-                onsubmit="return confirm('¿Cancelar este turno?');"
-                style="margin:0;">
-            <button type="submit" class="danger-link">Cancelar</button>
-          </form>#}
         </td>
       </tr>
       {% endfor %}

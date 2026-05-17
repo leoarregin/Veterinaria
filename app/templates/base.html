@@ -325,8 +325,8 @@
           <a href="/usuarios/">Usuarios</a>
           {% if session.user_id %}
             <a href="{{ url_for('dashboard.index') }}">Agenda del día</a>
-            {% if session.rol in ('Veterinario', 'Administrador') %}
-              {# este aparece solo cuando se navega a un turno específico #}
+            {% if current_user.user_role in ('Administrador', 'Recepcionista') %}
+              <a href="{{ url_for('turnos.nuevo') }}" class="button">+ Nuevo turno</a>
             {% endif %}
             <form class="nav-form" method="post" action="{{ url_for('auth.logout') }}">
               <button type="submit">Cerrar sesión</button>

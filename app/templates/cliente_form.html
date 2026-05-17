@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
+  <div>
+    <div class="section-title" style="margin:0;">Registrar cliente y mascota</div>
+    <div class="muted">Completa los datos del cliente y la mascota para poder crear un turno después.</div>
+  </div>
+  <a href="{{ url_for('turnos.nuevo') }}" class="button secondary">Volver a nuevo turno</a>
+</div>
+
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+{% endif %}
+
+<div class="card">
+  <form method="post" action="{{ url_for('turnos.registrar') }}" style="display:grid; gap:1rem;">
+    <div class="grid">
+      <label>
+        <div class="muted" style="margin-bottom:0.35rem;">Nombre cliente</div>
+        <input name="cliente_nombre" required value="{{ form.cliente_nombre }}">
+      </label>
+      <label>
+        <div class="muted" style="margin-bottom:0.35rem;">Apellido cliente</div>
+        <input name="cliente_apellido" required value="{{ form.cliente_apellido }}">
+      </label>
+      <label>
+        <div class="muted" style="margin-bottom:0.35rem;">DNI</div>
+        <input name="cliente_dni" value="{{ form.cliente_dni }}">
+      </label>
+      <label>
+        <div class="muted" style="margin-bottom:0.35rem;">Teléfono</div>
+        <input name="cliente_telefono" value="{{ form.cliente_telefono }}">
+      </label>
+      <label>
+        <div class="muted" style="margin-bottom:0.35rem;">Email</div>
+        <input type="email" name="cliente_email" value="{{ form.cliente_email }}">
+      </label>
+      <label>
+        <div class="muted" style="margin-bottom:0.35rem;">Dirección</div>
+        <input name="cliente_direccion" value="{{ form.cliente_direccion }}">
+      </label>
+    </div>
+
+    <div class="card" style="padding:1rem; background:var(--surface-tint);">
+      <div class="section-title" style="margin:0 0 0.75rem;">Datos de la mascota</div>
+      <div class="grid">
+        <label>
+          <div class="muted" style="margin-bottom:0.35rem;">Nombre mascota</div>
+          <input name="paciente_nombre" required value="{{ form.paciente_nombre }}">
+        </label>
+        <label>
+          <div class="muted" style="margin-bottom:0.35rem;">Especie</div>
+          <input name="paciente_especie" required value="{{ form.paciente_especie }}">
+        </label>
+        <label>
+          <div class="muted" style="margin-bottom:0.35rem;">Raza</div>
+          <input name="paciente_raza" value="{{ form.paciente_raza }}">
+        </label>
+        <label>
+          <div class="muted" style="margin-bottom:0.35rem;">Sexo</div>
+          <select name="paciente_sexo">
+            <option value="M" {% if form.paciente_sexo == 'M' %}selected{% endif %}>Macho</option>
+            <option value="F" {% if form.paciente_sexo == 'F' %}selected{% endif %}>Hembra</option>
+            <option value="desconocido" {% if form.paciente_sexo == 'desconocido' %}selected{% endif %}>Desconocido</option>
+          </select>
+        </label>
+        <label>
+          <div class="muted" style="margin-bottom:0.35rem;">Fecha de nacimiento</div>
+          <input type="date" name="paciente_fecha_nacimiento" value="{{ form.paciente_fecha_nacimiento }}">
+        </label>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+      <button type="submit" class="button">Guardar cliente y mascota</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
