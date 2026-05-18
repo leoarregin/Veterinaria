@@ -51,7 +51,7 @@ class PacienteRepository:
             """)
 
             # 2026-05-08 leo arregin / gonza arregin: migración ligera para bases existentes
-            # - agrega columnas faltantes en cliente sin romper SQLite.
+            # -agrega columnas faltantes en cliente sin romper SQLite.
             cliente_cols = {row[1] for row in conn.execute("PRAGMA table_info(cliente)").fetchall()}
             if "activo" not in cliente_cols:
                 conn.execute("ALTER TABLE cliente ADD COLUMN activo INTEGER NOT NULL DEFAULT 1")
