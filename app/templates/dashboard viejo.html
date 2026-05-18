@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{# ── métricas rápidas ─────────────────────────────────────── #}
+<div class="grid">
+  <div class="card">
+    <div class="muted">Turnos hoy</div>
+    <div class="metric">{{ turnos | length }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">En sala</div>
+    <div class="metric">{{ turnos | selectattr("estado","eq","presente") | list | length }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Atendidos</div>
+    <div class="metric">{{ turnos | selectattr("estado","eq","atendido") | list | length }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Pendientes</div>
+    <div class="metric">{{ turnos | selectattr("estado","in",["pendiente","confirmado"]) | list | length }}</div>
+  </div>
+</div>
+
+{# ── encabezado sección ───────────────────────────────────── #}
+<div style="display:flex; justify-content:space-between; align-items:center;
+            margin-top:1.5rem; margin-bottom:0.75rem;">
+  <div class="section-title" style="margin:0;">
+    Agenda del día — {{ hoy }}
+  </div>
+  <div style="display:flex; gap:0.5rem; align-items:center;">
+    {% if current_user.user_role in ("Administrador", "Recepcionista") %}
+       {#<a href="{{ url_for('turnos.new') }}" class="button">+ Nuevo turno</a> #}
+    {% endif %}
+    <a href="{{ url_for('dashboard.index') }}" class="button" style="background:transparent;
+       border:1px solid var(--border); color:var(--text-muted);">↺ Actualizar</a>
+  </div>
+</div>
+
+{# ── EN SALA ──────────────────────────────────────────────── #}
+{% set presentes = turnos | selectattr("estado","eq","presente") | list %}
+{% if presentes %}
+<div class="section-title" style="color: var(--success, #3fb950); margin-bottom:0.5rem;">
+  EN SALA
+</div>
+<div class="card" style="margin-bottom:1.25rem; padding:0;">
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Hora</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Paciente</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Especie / Raza</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Propietario</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Motivo</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Veterinario</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Estado</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in presentes %}
+      <tr>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   font-weight:700; color:var(--accent, #2ea8ff);">
+          {{ t.fecha_hora[11:16] }}
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+          {{ t.especie_icon }} <strong>{{ t.mascota }}</strong>
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+          {{ t.especie }} · {{ t.raza or '—' }}<br>
+          <small>{{ t.edad }}</small>
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+          {{ t.propietario }}<br>
+          <small class="muted">{{ t.telefono or '—' }}</small>
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+          {{ t.motivo or '—' }}
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+          {{ t.veterinario }}
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); vertical-align:middle;">
+          <span class="badge badge-presente">presente</span>
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); vertical-align:middle;">
+          {% if current_user.user_role in ("Veterinario", "Administrador") %}
+            <a href="{{ url_for('turnos.atender', turno_id=t.id) }}" class="button">Atender</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── PRÓXIMOS ─────────────────────────────────────────────── #}
+{% set proximos = turnos | selectattr("estado","in",["pendiente","confirmado"]) | list %}
+{% if proximos %}
+<div class="section-title" style="margin-bottom:0.5rem;">PRÓXIMOS</div>
+<div class="card" style="margin-bottom:1.25rem; padding:0;">
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Hora</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Paciente</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Especie / Raza</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Propietario</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Motivo</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Veterinario</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Estado</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in proximos %}
+      <tr>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); font-weight:600;">
+          {{ t.fecha_hora[11:16] }}
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+          {{ t.especie_icon }} <strong>{{ t.mascota }}</strong>
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+          {{ t.especie }} · {{ t.raza or '—' }}<br>
+          <small>{{ t.edad }}</small>
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+          {{ t.propietario }}<br>
+          <small class="muted">{{ t.telefono or '—' }}</small>
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+          {{ t.motivo or '—' }}
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+          {{ t.veterinario }}
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+          <span class="badge badge-{{ t.estado }}">{{ t.estado }}</span>
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); display:flex; gap:0.5rem; flex-wrap:wrap;">
+          {% if current_user.user_role in ("Recepcionista", "Administrador") %}
+            <form method="post"
+                  action="{{ url_for('dashboard.marcar_presente', turno_id=t.id) }}"
+                  style="margin:0;">
+              <button type="submit" class="link">Marcar presente</button>
+            </form>
+          {% endif %}
+          {#<a href="{{ url_for('turnos.edit', turno_id=t.id) }}" class="link">Editar</a>
+          <form method="post"
+                action="{{ url_for('turnos.cancelar', turno_id=t.id) }}"
+                onsubmit="return confirm('¿Cancelar este turno?');"
+                style="margin:0;">
+            <button type="submit" class="danger-link">Cancelar</button>
+          </form>#}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── FINALIZADOS ──────────────────────────────────────────── #}
+{% set finalizados = turnos | selectattr("estado","in",["atendido","cancelado","ausente"]) | list %}
+{% if finalizados %}
+<div class="section-title" style="margin-bottom:0.5rem; opacity:0.6;">FINALIZADOS</div>
+<div class="card" style="padding:0; opacity:0.7;">
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Hora</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Paciente</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Propietario</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Veterinario</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Estado</th>
+        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in finalizados %}
+      <tr>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+          {{ t.fecha_hora[11:16] }}
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+          {{ t.especie_icon }} {{ t.mascota }}
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+          {{ t.propietario }}
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+          {{ t.veterinario }}
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+          <span class="badge badge-{{ t.estado }}">{{ t.estado }}</span>
+        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+          {% if t.estado == "atendido" %}
+           {# <a href="{{ url_for('turnos.ver_atencion', turno_id=t.id) }}" class="link">Ver atención</a> #}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── sin turnos ───────────────────────────────────────────── #}
+{% if not turnos %}
+<div class="card" style="text-align:center; padding:3rem; color:var(--text-muted);">
+  Sin turnos programados para hoy.
+</div>
+{% endif %}
+
+{% endblock %}

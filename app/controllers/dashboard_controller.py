@@ -34,10 +34,17 @@ def index():
         t["especie_icon"] = ICONOS.get(t["especie"].lower(), "🐾")
         t["edad"]         = _edad(t.get("fecha_nac"))
 
+    pacientes    = svc.paciente_repository.list_all()
+    veterinarios = svc.user_repository.list_all()
+    veterinarios = [u for u in veterinarios if u.role == "Veterinario"]
+
     return render_template(
         "dashboard.html",
         turnos=turnos,
         hoy=date.today().strftime("%A %d de %B de %Y").capitalize(),
+        pacientes=pacientes,
+        veterinarios=veterinarios,
+        current_user=session,
     )
 
 

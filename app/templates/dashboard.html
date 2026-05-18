@@ -1,49 +1,182 @@
+
 {% extends "base.html" %}
-
+ 
 {% block content %}
-
-{# ── métricas rápidas ─────────────────────────────────────── #}
+ 
+{# ── métricas ─────────────────────────────────────────────── #}
 <div class="grid">
   <div class="card">
     <div class="muted">Turnos hoy</div>
     <div class="metric">{{ turnos | length }}</div>
   </div>
+  <div class="card" style="border-color: #ff2d2d;">
+    <div class="muted">Urgencias</div>
+    <div class="metric" style="color:#ff2d2d;">
+      {{ turnos | selectattr("estado","eq","urgente") | list | length }}
+    </div>
+  </div>
   <div class="card">
     <div class="muted">En sala</div>
-    <div class="metric">{{ turnos | selectattr("estado","eq","presente") | list | length }}</div>
+    <div class="metric">
+      {{ turnos | selectattr("estado","eq","presente") | list | length }}
+    </div>
   </div>
   <div class="card">
     <div class="muted">Atendidos</div>
-    <div class="metric">{{ turnos | selectattr("estado","eq","atendido") | list | length }}</div>
-  </div>
-  <div class="card">
-    <div class="muted">Pendientes</div>
-    <div class="metric">{{ turnos | selectattr("estado","in",["pendiente","confirmado"]) | list | length }}</div>
+    <div class="metric">
+      {{ turnos | selectattr("estado","eq","atendido") | list | length }}
+    </div>
   </div>
 </div>
-
-{# ── encabezado sección ───────────────────────────────────── #}
-<div style="display:flex; justify-content:space-between; align-items:center;
-            margin-top:1.5rem; margin-bottom:0.75rem;">
-  <div class="section-title" style="margin:0;">
-    Agenda del día — {{ hoy }}
+ 
+{# ── formulario urgencia rápida ───────────────────────────── #}
+{% if current_user.user_role in ("Recepcionista","Administrador","Veterinario") %}
+<details style="margin-top:1.25rem;">
+  <summary style="cursor:pointer; font-weight:600; color:#ff2d2d;
+                  padding:0.5rem 0; list-style:none; display:flex;
+                  align-items:center; gap:0.5rem;">
+    🚨 Registrar urgencia
+  </summary>
+  <div class="card" style="margin-top:0.5rem; border:2px solid #ff2d2d;
+                            background:rgba(255,45,45,0.04);">
+    <form method="post" action="{{ url_for('turnos.urgente') }}">
+      <div style="display:grid;
+                  grid-template-columns:1fr 1fr 1fr auto;
+                  gap:0.75rem; align-items:end;">
+        <div>
+          <label class="muted" style="font-size:0.8rem; font-weight:600;
+                 text-transform:uppercase; display:block; margin-bottom:0.3rem;">
+            Paciente *
+          </label>
+          <select name="paciente_id" required
+                  style="width:100%; padding:0.75rem;
+                         border:1px solid var(--border); border-radius:8px;
+                         color:var(--ink); background:white; font:inherit;">
+            <option value="">— seleccionar —</option>
+            {% for p in pacientes %}
+            <option value="{{ p.id }}">
+              {{ p.nombre }} ({{ p.especie }}) — {{ p.propietario }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="muted" style="font-size:0.8rem; font-weight:600;
+                 text-transform:uppercase; display:block; margin-bottom:0.3rem;">
+            Veterinario *
+          </label>
+          <select name="veterinario_id" required
+                  style="width:100%; padding:0.75rem;
+                         border:1px solid var(--border); border-radius:8px;
+                         color:var(--ink); background:white; font:inherit;">
+            <option value="">— seleccionar —</option>
+            {% for v in veterinarios %}
+            <option value="{{ v.id }}">{{ v.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="muted" style="font-size:0.8rem; font-weight:600;
+                 text-transform:uppercase; display:block; margin-bottom:0.3rem;">
+            Motivo
+          </label>
+          <input type="text" name="motivo" placeholder="ej: atropellado"
+                 style="width:100%; padding:0.75rem;
+                        border:1px solid var(--border); border-radius:8px;
+                        color:var(--ink); background:white; font:inherit;
+                        box-sizing:border-box;">
+        </div>
+        <button type="submit"
+                style="background:#ff2d2d; color:white; border:none;
+                       padding:0.75rem 1.25rem; border-radius:8px;
+                       font:inherit; font-weight:700; cursor:pointer;
+                       white-space:nowrap;">
+          🚨 Crear urgencia
+        </button>
+      </div>
+    </form>
   </div>
   <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
     <a href="{{ url_for('dashboard.index') }}" class="button" style="background:transparent;
        border:1px solid var(--border); color:var(--text-muted);">↺ Actualizar</a>
   </div>
+</details>
+{% endif %}
+ 
+{# ── URGENCIAS ────────────────────────────────────────────── #}
+{% set urgentes = turnos | selectattr("estado","eq","urgente") | list %}
+{% if urgentes %}
+<div style="margin-top:1.5rem;">
+  <div class="section-title"
+       style="color:#ff2d2d; display:flex; align-items:center;
+              gap:0.5rem; margin-bottom:0.75rem;">
+    🚨 URGENCIAS
+>>>>>>> 3924066ecf294904d04e10204a5d56f6a310e91f
+  </div>
+  {% for t in urgentes %}
+  <div style="background:rgba(255,45,45,0.06);
+              border:2px solid #ff2d2d;
+              border-radius:10px; padding:1.25rem;
+              margin-bottom:0.75rem;">
+    <div style="background:#ff2d2d; border-radius:8px;
+                padding:0.5rem 1rem; margin-bottom:1rem;
+                display:flex; align-items:center; gap:0.75rem;">
+      <span style="font-size:1.1rem; font-weight:700; color:white;">
+        🚨 URGENCIA — {{ t.fecha_hora[11:16] }}
+      </span>
+      <span style="margin-left:auto; color:white; font-size:0.9rem;">
+        👨‍⚕️ {{ t.veterinario }}
+      </span>
+    </div>
+    <div style="display:flex; align-items:center;
+                gap:1rem; flex-wrap:wrap;">
+      <span style="font-size:2rem;">{{ t.especie_icon }}</span>
+      <div style="flex:1;">
+        <div style="font-size:1.1rem; font-weight:700;">
+          {{ t.mascota }}
+          <span class="muted" style="font-size:0.85rem; font-weight:400;">
+            {{ t.especie }} · {{ t.raza or '—' }} · {{ t.edad }}
+          </span>
+        </div>
+        <div class="muted" style="margin-top:0.25rem;">
+          👤 {{ t.propietario }}
+          {% if t.telefono %} · 📞 {{ t.telefono }}{% endif %}
+        </div>
+        {% if t.motivo %}
+        <div style="margin-top:0.4rem; background:rgba(255,45,45,0.12);
+                    border-radius:6px; padding:0.3rem 0.75rem;
+                    display:inline-block; color:#ff2d2d;
+                    font-size:0.875rem; font-weight:600;">
+          {{ t.motivo }}
+        </div>
+        {% endif %}
+      </div>
+      {% if current_user.user_role in ("Veterinario","Administrador") %}
+      <a href="{{ url_for('turnos.atender', turno_id=t.id) }}"
+         style="background:#ff2d2d; color:white; text-decoration:none;
+                padding:0.75rem 1.5rem; border-radius:8px;
+                font-weight:700; font-size:0.95rem; white-space:nowrap;">
+        Atender urgencia →
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
 </div>
-
+{% endif %}
+ 
 {# ── EN SALA ──────────────────────────────────────────────── #}
 {% set presentes = turnos | selectattr("estado","eq","presente") | list %}
 {% if presentes %}
-<div class="section-title" style="color: var(--success, #3fb950); margin-bottom:0.5rem;">
+<div class="section-title"
+     style="color:var(--primary); margin-top:1.5rem; margin-bottom:0.5rem;">
   EN SALA
 </div>
 <div class="card" style="margin-bottom:1.25rem; padding:0;">
   <table style="width:100%; border-collapse:collapse;">
     <thead>
       <tr>
+<<<<<<< HEAD
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Hora</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Paciente</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Especie / Raza</th>
@@ -53,19 +186,27 @@
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Estado</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Prioridad</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Acciones</th>
+=======
+        {% for col in ["Hora","Paciente","Especie / Raza",
+                       "Propietario","Motivo","Veterinario","Acciones"] %}
+        <th style="text-align:left; padding:0.75rem;
+                   border-bottom:1px solid var(--border);">{{ col }}</th>
+        {% endfor %}
+>>>>>>> 3924066ecf294904d04e10204a5d56f6a310e91f
       </tr>
     </thead>
     <tbody>
       {% for t in presentes %}
       <tr>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);
-                   font-weight:700; color:var(--accent, #2ea8ff);">
+                   font-weight:700; color:var(--primary);">
           {{ t.fecha_hora[11:16] }}
         </td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
           {{ t.especie_icon }} <strong>{{ t.mascota }}</strong>
         </td>
-        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   color:var(--muted);">
           {{ t.especie }} · {{ t.raza or '—' }}<br>
           <small>{{ t.edad }}</small>
         </td>
@@ -73,6 +214,7 @@
           {{ t.propietario }}<br>
           <small class="muted">{{ t.telefono or '—' }}</small>
         </td>
+<<<<<<< HEAD
         <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
           {{ t.motivo or '—' }}
         </td>
@@ -88,6 +230,17 @@
         <td style="padding:0.75rem; border-bottom:1px solid var(--border); vertical-align:middle;">
           {% if current_user.user_role in ("Veterinario", "Administrador") %}
             <a href="{{ url_for('turnos.atender', turno_id=t.id) }}" class="button">Atender</a>
+=======
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   color:var(--muted);">{{ t.motivo or '—' }}</td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   color:var(--muted);">{{ t.veterinario }}</td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   vertical-align:middle;">
+          {% if current_user.user_role in ("Veterinario","Administrador") %}
+          <a href="{{ url_for('turnos.atender', turno_id=t.id) }}"
+             class="button">Atender</a>
+>>>>>>> 3924066ecf294904d04e10204a5d56f6a310e91f
           {% endif %}
         </td>
       </tr>
@@ -96,15 +249,17 @@
   </table>
 </div>
 {% endif %}
-
+ 
 {# ── PRÓXIMOS ─────────────────────────────────────────────── #}
-{% set proximos = turnos | selectattr("estado","in",["pendiente","confirmado"]) | list %}
+{% set proximos = turnos | selectattr("estado","in",
+                  ["pendiente","confirmado"]) | list %}
 {% if proximos %}
 <div class="section-title" style="margin-bottom:0.5rem;">PRÓXIMOS</div>
 <div class="card" style="margin-bottom:1.25rem; padding:0;">
   <table style="width:100%; border-collapse:collapse;">
     <thead>
       <tr>
+<<<<<<< HEAD
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Hora</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Paciente</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Especie / Raza</th>
@@ -114,18 +269,26 @@
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Estado</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Prioridad</th>
         <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Acciones</th>
+=======
+        {% for col in ["Hora","Paciente","Especie / Raza",
+                       "Propietario","Motivo","Veterinario",
+                       "Estado","Acciones"] %}
+        <th style="text-align:left; padding:0.75rem;
+                   border-bottom:1px solid var(--border);">{{ col }}</th>
+        {% endfor %}
+>>>>>>> 3924066ecf294904d04e10204a5d56f6a310e91f
       </tr>
     </thead>
     <tbody>
       {% for t in proximos %}
       <tr>
-        <td style="padding:0.75rem; border-bottom:1px solid var(--border); font-weight:600;">
-          {{ t.fecha_hora[11:16] }}
-        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   font-weight:600;">{{ t.fecha_hora[11:16] }}</td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
           {{ t.especie_icon }} <strong>{{ t.mascota }}</strong>
         </td>
-        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   color:var(--muted);">
           {{ t.especie }} · {{ t.raza or '—' }}<br>
           <small>{{ t.edad }}</small>
         </td>
@@ -133,15 +296,14 @@
           {{ t.propietario }}<br>
           <small class="muted">{{ t.telefono or '—' }}</small>
         </td>
-        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
-          {{ t.motivo or '—' }}
-        </td>
-        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
-          {{ t.veterinario }}
-        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   color:var(--muted);">{{ t.motivo or '—' }}</td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   color:var(--muted);">{{ t.veterinario }}</td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
           <span class="badge badge-{{ t.estado }}">{{ t.estado }}</span>
         </td>
+<<<<<<< HEAD
         <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
           {{ t.urgencia | capitalize }}
         </td>
@@ -158,6 +320,17 @@
                   style="margin:0;">
               <button type="submit" class="danger-link">Cancelar</button>
             </form>
+=======
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   vertical-align:middle;">
+          {% if current_user.user_role in ("Recepcionista","Administrador") %}
+          <form method="post"
+                action="{{ url_for('dashboard.marcar_presente',
+                           turno_id=t.id) }}"
+                style="margin:0; display:inline;">
+            <button type="submit" class="link">Marcar presente</button>
+          </form>
+>>>>>>> 3924066ecf294904d04e10204a5d56f6a310e91f
           {% endif %}
         </td>
       </tr>
@@ -166,44 +339,43 @@
   </table>
 </div>
 {% endif %}
-
+ 
 {# ── FINALIZADOS ──────────────────────────────────────────── #}
-{% set finalizados = turnos | selectattr("estado","in",["atendido","cancelado","ausente"]) | list %}
+{% set finalizados = turnos | selectattr("estado","in",
+                     ["atendido","cancelado","ausente"]) | list %}
 {% if finalizados %}
-<div class="section-title" style="margin-bottom:0.5rem; opacity:0.6;">FINALIZADOS</div>
+<div class="section-title"
+     style="margin-bottom:0.5rem; opacity:0.6;">FINALIZADOS</div>
 <div class="card" style="padding:0; opacity:0.7;">
   <table style="width:100%; border-collapse:collapse;">
     <thead>
       <tr>
-        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Hora</th>
-        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Paciente</th>
-        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Propietario</th>
-        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Veterinario</th>
-        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Estado</th>
-        <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">Acciones</th>
+        {% for col in ["Hora","Paciente","Propietario",
+                       "Veterinario","Estado","Acciones"] %}
+        <th style="text-align:left; padding:0.75rem;
+                   border-bottom:1px solid var(--border);">{{ col }}</th>
+        {% endfor %}
       </tr>
     </thead>
     <tbody>
       {% for t in finalizados %}
       <tr>
-        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
-          {{ t.fecha_hora[11:16] }}
-        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   color:var(--muted);">{{ t.fecha_hora[11:16] }}</td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
           {{ t.especie_icon }} {{ t.mascota }}
         </td>
-        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
-          {{ t.propietario }}
-        </td>
-        <td style="padding:0.75rem; border-bottom:1px solid var(--border); color:var(--text-muted);">
-          {{ t.veterinario }}
-        </td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   color:var(--muted);">{{ t.propietario }}</td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);
+                   color:var(--muted);">{{ t.veterinario }}</td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
           <span class="badge badge-{{ t.estado }}">{{ t.estado }}</span>
         </td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
           {% if t.estado == "atendido" %}
-           {# <a href="{{ url_for('turnos.ver_atencion', turno_id=t.id) }}" class="link">Ver atención</a> #}
+          {# <a href="{{ url_for('turnos.ver_atencion', turno_id=t.id) }}"
+               class="link">Ver atención</a> #}
           {% endif %}
         </td>
       </tr>
@@ -212,12 +384,14 @@
   </table>
 </div>
 {% endif %}
-
-{# ── sin turnos ───────────────────────────────────────────── #}
+ 
 {% if not turnos %}
-<div class="card" style="text-align:center; padding:3rem; color:var(--text-muted);">
+<div class="card"
+     style="text-align:center; padding:3rem; color:var(--muted);
+            margin-top:1.5rem;">
   Sin turnos programados para hoy.
 </div>
 {% endif %}
-
+ 
 {% endblock %}
+ 

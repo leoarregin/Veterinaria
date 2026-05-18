@@ -297,3 +297,29 @@ def cancelar(turno_id: int):
     HospitalService().cancelar_turno(turno_id)
     flash("Turno cancelado.", "success")
     return redirect(url_for("dashboard.index"))
+
+@bp.route("/urgente", methods=["POST"])
+def urgente():
+    """Crea un turno urgente desde el formulario de recepción."""
+    if session.get("user_role") not in {"Recepcionista", "Administrador",
+                                         "Veterinario"}:
+        flash("Sin permiso.", "error")
+        return redirect(url_for("dashboard.index"))
+ 
+    paciente_id    = request.form.get("paciente_id", "").strip()
+    veterinario_id = request.form.get("veterinario_id", "").strip()
+    motivo         = request.form.get("motivo", "Urgencia").strip()
+ 
+    if not paciente_id or not veterinario_id:
+        flash("Seleccioná paciente y veterinario.", "error")
+        return redirect(url_for("dashboard.index"))
+ 
+    svc = HospitalService()
+    svc.crear_turno_urgente(
+        mascota_id=int(paciente_id),
+        veterinario_id=int(veterinario_id),
+        recepcionista_id=session["user_id"],
+        motivo=motivo,
+    )
+    flash("🚨 Turno urgente creado.", "success")
+    return redirect(url_for("dashboard.index"))
