@@ -238,59 +238,74 @@ def atender(turno_id: int):
 
     svc   = HospitalService()
     turno = svc.get_turno_by_id(turno_id)
-    
     if not turno:
         abort(404)
 
-    mascota  = _enriquecer_mascota(svc.get_paciente_info(turno["paciente_id"]))
+    mascota   = _enriquecer_mascota(svc.get_paciente_info(turno["paciente_id"]))
     historial = svc.get_historial(turno["paciente_id"])
 
+    # buscar atención previa en pausa para este turno
+    atencion_previa = svc.get_atencion_en_pausa(turno_id)
+
+    # marcar en_consulta al abrir (si venía de presente o en_pausa)
+    if turno["estado"] in ("presente", "en_pausa"):
+        svc.marcar_en_consulta(turno_id)
+
     if request.method == "POST":
+        accion      = request.form.get("accion", "cerrar")
         diagnostico = request.form.get("diagnostico", "").strip()
 
-        if not diagnostico:
+        # solo exigir diagnóstico al cerrar
+        if accion == "cerrar" and not diagnostico:
             return render_template(
                 "paciente.html",
                 turno=turno, mascota=mascota, historial=historial,
+                atencion_previa=atencion_previa,
                 hoy_datetime=datetime.now().strftime("%d/%m/%Y  %H:%M"),
                 form=request.form,
-                error="El diagnóstico es obligatorio.",
+                error="El diagnóstico es obligatorio para cerrar la atención.",
                 success=None,
             )
 
-        svc.guardar_atencion({
-            "turno_id":       turno_id,
-            "paciente_id":    turno["paciente_id"],
-            "veterinario_id": session["user_id"],
-            "anamnesis":      request.form.get("anamnesis", ""),
-            "examen_fisico":  request.form.get("examen_fisico", ""),
-            "diagnostico":    diagnostico,
-            "tratamiento":    request.form.get("tratamiento", ""),
-            "observaciones":  request.form.get("observaciones", ""),
-            #"monto":          float(request.form.get("monto") or 0),
-            # constantes vitales
-            "temperatura_c":     request.form.get("temperatura_c") or None,
-            "peso_consulta_kg":  request.form.get("peso_consulta_kg") or None,
-            "fc_rpm":            request.form.get("fc_rpm") or None,
-            "fr_rpm":            request.form.get("fr_rpm") or None,
-            "trc_seg":           request.form.get("trc_seg") or None,
+        datos = {
+            "turno_id":          turno_id,
+            "paciente_id":       turno["paciente_id"],
+            "veterinario_id":    session["user_id"],
+            "anamnesis":         request.form.get("anamnesis", ""),
+            "examen_fisico":     request.form.get("examen_fisico", ""),
+            "diagnostico":       diagnostico,
+            "tratamiento":       request.form.get("tratamiento", ""),
+            "observaciones":     request.form.get("observaciones", ""),
+            "temperatura_c":     request.form.get("temperatura_c")      or None,
+            "peso_consulta_kg":  request.form.get("peso_consulta_kg")   or None,
+            "fc_rpm":            request.form.get("fc_rpm")             or None,
+            "fr_rpm":            request.form.get("fr_rpm")             or None,
+            "trc_seg":           request.form.get("trc_seg")            or None,
             "mucosas":           request.form.get("mucosas", ""),
             "condicion_corporal":request.form.get("condicion_corporal") or None,
-            "dolor":             request.form.get("dolor") or None,
-            "medicaciones":   _meds_from_form(),
-            "estudios":       _ests_from_form(),
-        })
+            "dolor":             request.form.get("dolor")              or None,
+            "medicaciones":      _meds_from_form(),
+            "estudios":          _ests_from_form(),
+        }
 
-        flash("Atención guardada correctamente.", "success")
-        return redirect(url_for("dashboard.index"))
+        if accion == "pausar":
+            svc.guardar_atencion_pausa(datos, atencion_previa)
+            svc.marcar_en_pausa(turno_id)
+            flash("⏸️ Atención pausada. Podés continuar más tarde.", "success")
+            return redirect(url_for("dashboard.index"))
+        else:
+            svc.guardar_atencion(datos, atencion_previa)
+            flash("✓ Atención cerrada correctamente.", "success")
+            return redirect(url_for("dashboard.index"))
 
     return render_template(
         "paciente.html",
         turno=turno, mascota=mascota, historial=historial,
+        atencion_previa=atencion_previa,
         hoy_datetime=datetime.now().strftime("%d/%m/%Y  %H:%M"),
-        form={}, error=None, success=None,
+        form=atencion_previa or {},
+        error=None, success=None,
     )
-
 
 @bp.route("/<int:turno_id>/cancelar", methods=["POST"])
 def cancelar(turno_id: int):

@@ -95,6 +95,21 @@ class HospitalService:
     def cancelar_turno(self, turno_id: int) -> None:
         self.turno_repository.cancelar(turno_id)
 
+        
+    def marcar_en_consulta(self, turno_id: int) -> None:
+        self.turno_repository.marcar_en_consulta(turno_id)
+    
+    def marcar_en_pausa(self, turno_id: int) -> None:
+        self.turno_repository.marcar_en_pausa(turno_id)
+    
+    def get_atencion_en_pausa(self, turno_id: int) -> dict | None:
+        return self.turno_repository.get_atencion_en_pausa(turno_id)
+    
+    def guardar_atencion_pausa(self, data: dict,
+                                previa: dict | None = None) -> int:
+        return self.turno_repository.guardar_atencion_pausa(data, previa)
+    
+
     def crear_turno_urgente(self, mascota_id: int, veterinario_id: int,
                          recepcionista_id: int, motivo: str = "") -> int:
         return self.turno_repository.crear_turno_urgente(
@@ -110,5 +125,5 @@ class HospitalService:
     def get_historial(self, mascota_id: int) -> list[dict]:
         return self.turno_repository.get_historial(mascota_id)
 
-    def guardar_atencion(self, data: dict) -> int:
-        return self.turno_repository.guardar_atencion(data)
+    def guardar_atencion(self, data: dict, previa: dict | None = None) -> int:
+        return self.turno_repository.guardar_atencion(data, previa)

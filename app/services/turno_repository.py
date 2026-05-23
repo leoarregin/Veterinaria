@@ -28,7 +28,7 @@ class TurnoRepository:
                     fecha_hora          TEXT    NOT NULL,
                     estado              TEXT    NOT NULL DEFAULT 'pendiente'
                                         CHECK (estado IN ('pendiente','confirmado','presente',
-                                                           'atendido','cancelado','ausente',urgente)),
+                                                           'atendido','cancelado','ausente')),
                     motivo              TEXT,
                     urgencia            TEXT    NOT NULL DEFAULT 'normal',
                     created_at          TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
@@ -89,42 +89,64 @@ class TurnoRepository:
 
     # ── turnos ────────────────────────────────────────────────
 
-    def get_turnos_hoy(self, veterinario_id: int | None = None) -> list[dict]:
+    def get_turnos_hoy(self, veterinario_id=None) -> list[dict]:
         hoy = date.today().isoformat()
         query = """
             SELECT t.id, t.fecha_hora, t.estado, t.motivo, t.urgencia,
-                   p.id AS paciente_id, p.nombre AS mascota,
-                   p.especie, p.raza, p.peso_kg, p.sexo, p.fecha_nacimiento AS fecha_nac,
-                   c.nombre || ' ' || c.apellido AS propietario,
-                   c.telefono,
-                   u.full_name AS veterinario,
-                   u.id AS vet_id
+                p.id AS paciente_id, p.nombre AS mascota,
+                p.especie, p.raza, p.peso_kg, p.sexo,
+                p.fecha_nacimiento AS fecha_nac,
+                c.nombre || ' ' || c.apellido AS propietario,
+                c.telefono,
+                u.full_name AS veterinario,
+                u.id AS vet_id
             FROM turno t
             JOIN paciente p ON p.id = t.paciente_id
             JOIN cliente  c ON c.id = p.cliente_id
             JOIN users    u ON u.id = t.veterinario_id
             WHERE DATE(t.fecha_hora) = ?
+            AND t.estado NOT IN ('cancelado','ausente','atendido')
         """
-        params: list = [hoy]
+        params = [hoy]
         if veterinario_id:
             query += " AND t.veterinario_id = ?"
             params.append(veterinario_id)
-        query += " ORDER BY CASE t.urgencia WHEN 'emergencia' THEN 1 WHEN 'urgente' THEN 2 ELSE 3 END, t.fecha_hora"
-
+    
+        # ordenar: emergencia primero, urgente segundo, normal último
+        # dentro de cada grupo por hora
+        query += """
+            ORDER BY
+                CASE t.urgencia
+                    WHEN 'emergencia' THEN 1
+                    WHEN 'urgente'    THEN 2
+                    ELSE                   3
+                END,
+                CASE t.estado
+                    WHEN 'en_pausa'    THEN 1
+                    WHEN 'en_consulta' THEN 2
+                    WHEN 'presente'    THEN 3
+                    WHEN 'confirmado'  THEN 4
+                    WHEN 'pendiente'   THEN 5
+                    ELSE                    6
+                END,
+                t.fecha_hora
+        """
         with self._connect() as conn:
             rows = conn.execute(query, params).fetchall()
         return [dict(r) for r in rows]
-
+    
+    
     def get_by_id(self, turno_id: int) -> dict | None:
         with self._connect() as conn:
-            row = conn.execute("""
+            row = self._connect().execute("""
                 SELECT t.id, t.fecha_hora, t.estado, t.motivo, t.urgencia,
-                       p.id AS paciente_id, p.nombre AS mascota,
-                       p.especie, p.raza, p.peso_kg, p.sexo, p.fecha_nacimiento AS fecha_nac,
-                       c.nombre || ' ' || c.apellido AS propietario,
-                       c.telefono,
-                       u.full_name AS veterinario,
-                       u.id AS vet_id
+                    p.id AS paciente_id, p.nombre AS mascota,
+                    p.especie, p.raza, p.peso_kg, p.sexo,
+                    p.fecha_nacimiento AS fecha_nac,
+                    c.nombre || ' ' || c.apellido AS propietario,
+                    c.telefono,
+                    u.full_name AS veterinario,
+                    u.id AS vet_id
                 FROM turno t
                 JOIN paciente p ON p.id = t.paciente_id
                 JOIN cliente  c ON c.id = p.cliente_id
@@ -168,6 +190,173 @@ class TurnoRepository:
                 (turno_id,)
             )
 
+    def marcar_en_consulta(self, turno_id: int) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE turno SET estado = 'en_consulta' WHERE id = ?",
+                (turno_id,)
+            )
+ 
+    def marcar_en_pausa(self, turno_id: int) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE turno SET estado = 'en_pausa' WHERE id = ?",
+                (turno_id,)
+            )
+    
+    def get_atencion_en_pausa(self, turno_id: int) -> dict | None:
+        """Devuelve la atención en pausa de un turno si existe."""
+        with self._connect() as conn:
+            row = conn.execute("""
+                SELECT a.*,
+                    GROUP_CONCAT(
+                        m.medicamento || '|' || COALESCE(m.dosis,'') || '|' ||
+                        COALESCE(m.via,'') || '|' || COALESCE(m.frecuencia,'') || '|' ||
+                        COALESCE(CAST(m.duracion_dias AS TEXT),''),
+                        ';;'
+                    ) AS meds_raw
+                FROM atencion a
+                LEFT JOIN medicacion m ON m.atencion_id = a.id
+                WHERE a.turno_id = ? AND a.estado = 'en_pausa'
+                GROUP BY a.id
+                ORDER BY a.fecha_hora DESC
+                LIMIT 1
+            """, (turno_id,)).fetchone()
+    
+            if not row:
+                return None
+    
+            a = dict(row)
+    
+            # recuperar medicaciones
+            meds = []
+            if a.get("meds_raw"):
+                for item in a["meds_raw"].split(";;"):
+                    parts = item.split("|")
+                    if len(parts) == 5 and parts[0].strip():
+                        meds.append({
+                            "medicamento":  parts[0],
+                            "dosis":        parts[1],
+                            "via":          parts[2],
+                            "frecuencia":   parts[3],
+                            "duracion_dias":parts[4],
+                        })
+            a["medicaciones"] = meds
+    
+            # recuperar estudios
+            estudios = conn.execute("""
+                SELECT tipo, descripcion, resultado, fecha
+                FROM estudio WHERE atencion_id = ?
+            """, (a["id"],)).fetchall()
+            a["estudios"] = [dict(e) for e in estudios]
+    
+            return a
+    
+    
+    def guardar_atencion_pausa(self, data: dict,
+                                previa: dict | None = None) -> int:
+        """
+        Guarda o actualiza una atención con estado 'en_pausa'.
+        Si existe una atención previa en pausa la actualiza,
+        si no existe crea una nueva.
+        """
+        with self._connect() as conn:
+            if previa:
+                # actualizar atención existente
+                conn.execute("""
+                    UPDATE atencion SET
+                        anamnesis=?, examen_fisico=?, diagnostico=?,
+                        tratamiento=?, observaciones=?,
+                        temperatura_c=?, peso_consulta_kg=?,
+                        fc_rpm=?, fr_rpm=?, trc_seg=?,
+                        mucosas=?, condicion_corporal=?, dolor=?,
+                        estado='en_pausa'
+                    WHERE id=?
+                """, (
+                    data.get("anamnesis",""),
+                    data.get("examen_fisico",""),
+                    data.get("diagnostico",""),
+                    data.get("tratamiento",""),
+                    data.get("observaciones",""),
+                    data.get("temperatura_c")      or None,
+                    data.get("peso_consulta_kg")   or None,
+                    data.get("fc_rpm")             or None,
+                    data.get("fr_rpm")             or None,
+                    data.get("trc_seg")            or None,
+                    data.get("mucosas",""),
+                    data.get("condicion_corporal") or None,
+                    data.get("dolor")              or None,
+                    previa["id"],
+                ))
+                atencion_id = previa["id"]
+    
+                # borrar y reinsertar medicaciones
+                conn.execute(
+                    "DELETE FROM medicacion WHERE atencion_id = ?",
+                    (atencion_id,))
+                conn.execute(
+                    "DELETE FROM estudio WHERE atencion_id = ?",
+                    (atencion_id,))
+            else:
+                # crear nueva atención en pausa
+                cur = conn.execute("""
+                    INSERT INTO atencion
+                        (turno_id, paciente_id, veterinario_id,
+                        anamnesis, examen_fisico, diagnostico,
+                        tratamiento, observaciones,
+                        temperatura_c, peso_consulta_kg,
+                        fc_rpm, fr_rpm, trc_seg,
+                        mucosas, condicion_corporal, dolor,
+                        estado)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'en_pausa')
+                """, (
+                    data.get("turno_id"),
+                    data["paciente_id"],
+                    data["veterinario_id"],
+                    data.get("anamnesis",""),
+                    data.get("examen_fisico",""),
+                    data.get("diagnostico",""),
+                    data.get("tratamiento",""),
+                    data.get("observaciones",""),
+                    data.get("temperatura_c")      or None,
+                    data.get("peso_consulta_kg")   or None,
+                    data.get("fc_rpm")             or None,
+                    data.get("fr_rpm")             or None,
+                    data.get("trc_seg")            or None,
+                    data.get("mucosas",""),
+                    data.get("condicion_corporal") or None,
+                    data.get("dolor")              or None,
+                ))
+                atencion_id = cur.lastrowid
+    
+            # insertar medicaciones
+            for m in data.get("medicaciones", []):
+                if m.get("medicamento","").strip():
+                    conn.execute("""
+                        INSERT INTO medicacion
+                            (atencion_id, medicamento, dosis,
+                            via, frecuencia, duracion_dias)
+                        VALUES (?,?,?,?,?,?)
+                    """, (atencion_id, m["medicamento"],
+                        m.get("dosis",""), m.get("via",""),
+                        m.get("frecuencia",""),
+                        m.get("duracion_dias") or None))
+    
+            # insertar estudios
+            for e in data.get("estudios", []):
+                if e.get("tipo","").strip():
+                    conn.execute("""
+                        INSERT INTO estudio
+                            (atencion_id, tipo, descripcion, resultado, fecha)
+                        VALUES (?,?,?,?,?)
+                    """, (atencion_id, e["tipo"],
+                        e.get("descripcion",""),
+                        e.get("resultado",""),
+                        e.get("fecha", date.today().isoformat())))
+    
+        return atencion_id
+    
+    
     def cancelar(self, turno_id: int) -> None:
         with self._connect() as conn:
             conn.execute(
@@ -220,62 +409,109 @@ class TurnoRepository:
             result.append(a)
         return result
 
-    def guardar_atencion(self, data: dict) -> int:
+    def guardar_atencion(self, data: dict,
+                        previa: dict | None = None) -> int:
+        """
+        Cierra definitivamente la atención.
+        Si hay una atención previa en pausa la actualiza a 'cerrado',
+        si no existe crea una nueva como 'cerrado'.
+        """
         with self._connect() as conn:
-            cur = conn.execute("""
-                INSERT INTO atencion
-                (turno_id, paciente_id, veterinario_id,
-                anamnesis, examen_fisico, diagnostico,
-                tratamiento, observaciones,
-                temperatura_c, peso_consulta_kg, fc_rpm, fr_rpm,
-                trc_seg, mucosas, condicion_corporal, dolor)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """, (
-                data.get("turno_id"),
-                data["paciente_id"],
-                data["veterinario_id"],
-                data.get("anamnesis", ""),
-                data.get("examen_fisico", ""),
-                data.get("diagnostico", ""),
-                data.get("tratamiento", ""),
-                data.get("observaciones", ""),
-                data.get("temperatura_c")     or None,
-                data.get("peso_consulta_kg")  or None,
-                data.get("fc_rpm")            or None,
-                data.get("fr_rpm")            or None,
-                data.get("trc_seg")           or None,
-                data.get("mucosas",           ""),
-                data.get("condicion_corporal")or None,
-                data.get("dolor")             or None,
-            ))
-            atencion_id = cur.lastrowid
-
+            if previa:
+                conn.execute("""
+                    UPDATE atencion SET
+                        anamnesis=?, examen_fisico=?, diagnostico=?,
+                        tratamiento=?, observaciones=?,
+                        temperatura_c=?, peso_consulta_kg=?,
+                        fc_rpm=?, fr_rpm=?, trc_seg=?,
+                        mucosas=?, condicion_corporal=?, dolor=?,
+                        estado='cerrado'
+                    WHERE id=?
+                """, (
+                    data.get("anamnesis",""),
+                    data.get("examen_fisico",""),
+                    data.get("diagnostico",""),
+                    data.get("tratamiento",""),
+                    data.get("observaciones",""),
+                    data.get("temperatura_c")      or None,
+                    data.get("peso_consulta_kg")   or None,
+                    data.get("fc_rpm")             or None,
+                    data.get("fr_rpm")             or None,
+                    data.get("trc_seg")            or None,
+                    data.get("mucosas",""),
+                    data.get("condicion_corporal") or None,
+                    data.get("dolor")              or None,
+                    previa["id"],
+                ))
+                atencion_id = previa["id"]
+                conn.execute(
+                    "DELETE FROM medicacion WHERE atencion_id = ?",
+                    (atencion_id,))
+                conn.execute(
+                    "DELETE FROM estudio WHERE atencion_id = ?",
+                    (atencion_id,))
+            else:
+                cur = conn.execute("""
+                    INSERT INTO atencion
+                        (turno_id, paciente_id, veterinario_id,
+                        anamnesis, examen_fisico, diagnostico,
+                        tratamiento, observaciones,
+                        temperatura_c, peso_consulta_kg,
+                        fc_rpm, fr_rpm, trc_seg,
+                        mucosas, condicion_corporal, dolor,
+                        estado)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'cerrado')
+                """, (
+                    data.get("turno_id"),
+                    data["paciente_id"],
+                    data["veterinario_id"],
+                    data.get("anamnesis",""),
+                    data.get("examen_fisico",""),
+                    data.get("diagnostico",""),
+                    data.get("tratamiento",""),
+                    data.get("observaciones",""),
+                    data.get("temperatura_c")      or None,
+                    data.get("peso_consulta_kg")   or None,
+                    data.get("fc_rpm")             or None,
+                    data.get("fr_rpm")             or None,
+                    data.get("trc_seg")            or None,
+                    data.get("mucosas",""),
+                    data.get("condicion_corporal") or None,
+                    data.get("dolor")              or None,
+                ))
+                atencion_id = cur.lastrowid
+    
+            # medicaciones y estudios
             for m in data.get("medicaciones", []):
-                if m.get("medicamento", "").strip():
+                if m.get("medicamento","").strip():
                     conn.execute("""
                         INSERT INTO medicacion
-                            (atencion_id, medicamento, dosis, via, frecuencia, duracion_dias)
+                            (atencion_id, medicamento, dosis,
+                            via, frecuencia, duracion_dias)
                         VALUES (?,?,?,?,?,?)
-                    """, (atencion_id, m["medicamento"], m.get("dosis", ""),
-                          m.get("via", ""), m.get("frecuencia", ""),
-                          m.get("duracion_dias") or None))
-
+                    """, (atencion_id, m["medicamento"],
+                        m.get("dosis",""), m.get("via",""),
+                        m.get("frecuencia",""),
+                        m.get("duracion_dias") or None))
+    
             for e in data.get("estudios", []):
-                if e.get("tipo", "").strip():
+                if e.get("tipo","").strip():
                     conn.execute("""
                         INSERT INTO estudio
                             (atencion_id, tipo, descripcion, resultado, fecha)
                         VALUES (?,?,?,?,?)
-                    """, (atencion_id, e["tipo"], e.get("descripcion", ""),
-                          e.get("resultado", ""),
-                          e.get("fecha", date.today().isoformat())))
-
+                    """, (atencion_id, e["tipo"],
+                        e.get("descripcion",""),
+                        e.get("resultado",""),
+                        e.get("fecha", date.today().isoformat())))
+    
+            # marcar turno como atendido
             if data.get("turno_id"):
                 conn.execute(
                     "UPDATE turno SET estado = 'atendido' WHERE id = ?",
                     (data["turno_id"],)
                 )
-
+    
         return atencion_id
 
     def _row_to_atencion(self, row: sqlite3.Row) -> Atencion:

@@ -5,7 +5,6 @@
 {# ── ficha del paciente ───────────────────────────────────── #}
 <div style="display:flex; justify-content:space-between; align-items:flex-start;
             margin-bottom:1rem; gap:1rem; flex-wrap:wrap;">
-
   <div>
     <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
       <span style="font-size:2rem;">{{ mascota.especie_icon }}</span>
@@ -21,107 +20,87 @@
       {% if mascota.color %}· {{ mascota.color }}{% endif %}
     </div>
   </div>
-
   <div style="text-align:right;">
     <div style="font-weight:600;">{{ mascota.propietario }}</div>
     <div class="muted">{{ mascota.telefono or '—' }}</div>
-    <div class="muted" style="font-size:0.8rem;">{{ mascota.email_cliente or '' }}</div>
   </div>
 </div>
 
-{# banner motivo del turno #}
-<div style="background:color-mix(in srgb, var(--accent, #2ea8ff) 10%, transparent);
-            border:1px solid color-mix(in srgb, var(--accent, #2ea8ff) 30%, transparent);
+{# banner motivo + urgencia #}
+<div style="background:color-mix(in srgb, var(--primary) 8%, transparent);
+            border:1px solid color-mix(in srgb, var(--primary) 25%, transparent);
             border-radius:8px; padding:0.6rem 1rem; margin-bottom:1.5rem;
-            display:flex; align-items:center; gap:0.5rem;">
+            display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
   <span>ℹ️</span>
-  <span>Motivo de consulta: <strong>{{ turno.motivo or '—' }}</strong>
-    &nbsp;·&nbsp; Turno {{ turno.fecha_hora[11:16] }}
-    &nbsp;·&nbsp; Vet: {{ turno.veterinario }}
+  <span>Motivo: <strong>{{ turno.motivo or '—' }}</strong></span>
+  <span class="muted">·</span>
+  <span>{{ turno.fecha_hora[11:16] }}</span>
+  {% if turno.urgencia and turno.urgencia != 'normal' %}
+  <span class="muted">·</span>
+  <span class="badge badge-{{ turno.urgencia }}">{{ turno.urgencia }}</span>
+  {% endif %}
+  {% if atencion_previa %}
+  <span style="margin-left:auto; background:rgba(210,153,34,0.15);
+               color:#d29922; padding:0.2rem 0.75rem; border-radius:10px;
+               font-size:0.8rem; font-weight:600;">
+    ⏸️ Atención en pausa — datos precargados
   </span>
+  {% endif %}
 </div>
 
 {# ── layout 2 columnas ────────────────────────────────────── #}
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:start;">
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;
+            align-items:start;">
 
   {# ════ columna izquierda: historial ═══════════════════════ #}
   <div>
-    <div style="display:flex; justify-content:space-between; align-items:center;
-                margin-bottom:0.5rem;">
+    <div style="display:flex; justify-content:space-between;
+                align-items:center; margin-bottom:0.5rem;">
       <div class="section-title" style="margin:0;">Historial clínico</div>
       <span class="muted" style="font-size:0.8rem;">
-        {{ historial | length }} atención{{ 'es' if historial | length != 1 else '' }} previa{{ 's' if historial | length != 1 else '' }}
+        {{ historial | length }} atención{{ 'es' if historial|length != 1 else '' }} previa{{ 's' if historial|length != 1 else '' }}
       </span>
     </div>
 
     {% if historial %}
       {% for a in historial %}
+      {# saltar la atención en pausa del turno actual — ya se muestra en el form #}
+      {% if not (atencion_previa and a.id == atencion_previa.id) %}
       <div class="card" style="margin-bottom:1rem; padding:1rem;">
-
-        {# cabecera atención #}
-        <div style="display:flex; justify-content:space-between; align-items:center;
-                    margin-bottom:0.75rem;">
-          <span style="font-weight:700; color:var(--accent, #2ea8ff);">
+        <div style="display:flex; justify-content:space-between;
+                    align-items:center; margin-bottom:0.75rem;">
+          <span style="font-weight:700; color:var(--primary);">
             {{ a.fecha_hora | format_datetime }}
           </span>
           <div style="display:flex; gap:1rem; align-items:center;">
-            <span class="muted" style="font-size:0.85rem;">👨‍⚕️ {{ a.veterinario }}</span>
-            <span style="font-size:0.85rem; color:var(--success, #3fb950);">
-              $ {{ "{:,.0f}".format(a.monto) }}
+            <span class="muted" style="font-size:0.85rem;">
+              👨‍⚕️ {{ a.veterinario }}
             </span>
           </div>
         </div>
 
-        {# campos clínicos #}
-        {% if a.anamnesis %}
+        {% for lbl, val in [
+          ("Anamnesis",   a.anamnesis),
+          ("Examen físico", a.examen_fisico),
+          ("Diagnóstico", a.diagnostico),
+          ("Tratamiento", a.tratamiento),
+          ("Observaciones", a.observaciones),
+        ] %}
+        {% if val %}
         <div style="margin-bottom:0.5rem;">
           <div class="muted" style="font-size:0.75rem; font-weight:600;
-                                    text-transform:uppercase; margin-bottom:0.2rem;">
-            Anamnesis
-          </div>
-          <div>{{ a.anamnesis }}</div>
+               text-transform:uppercase; margin-bottom:0.2rem;">{{ lbl }}</div>
+          <div>{{ val }}</div>
         </div>
         {% endif %}
+        {% endfor %}
 
-        {% if a.examen_fisico %}
-        <div style="margin-bottom:0.5rem;">
-          <div class="muted" style="font-size:0.75rem; font-weight:600;
-                                    text-transform:uppercase; margin-bottom:0.2rem;">
-            Examen físico
-          </div>
-          <div>{{ a.examen_fisico }}</div>
-        </div>
-        {% endif %}
-
-        {% if a.diagnostico %}
-        <div style="margin-bottom:0.5rem;">
-          <div class="muted" style="font-size:0.75rem; font-weight:600;
-                                    text-transform:uppercase; margin-bottom:0.2rem;">
-            Diagnóstico
-          </div>
-          <div>{{ a.diagnostico }}</div>
-        </div>
-        {% endif %}
-
-        {% if a.tratamiento %}
-        <div style="margin-bottom:0.5rem;">
-          <div class="muted" style="font-size:0.75rem; font-weight:600;
-                                    text-transform:uppercase; margin-bottom:0.2rem;">
-            Tratamiento
-          </div>
-          <div>{{ a.tratamiento }}</div>
-        </div>
-        {% endif %}
-
-        {# medicaciones #}
         {% if a.medicaciones %}
         <div style="margin-top:0.75rem;">
           <div class="muted" style="font-size:0.75rem; font-weight:600;
-                                    text-transform:uppercase; margin-bottom:0.4rem;">
-            Medicación
-          </div>
+               text-transform:uppercase; margin-bottom:0.4rem;">Medicación</div>
           {% for m in a.medicaciones %}
-          <div style="background:color-mix(in srgb, #bc8cff 10%, transparent);
+          <div style="background:color-mix(in srgb,#bc8cff 10%,transparent);
                       border-radius:6px; padding:0.4rem 0.75rem;
                       margin-bottom:0.3rem; font-size:0.875rem;">
             💊 <strong>{{ m.medicamento }}</strong>
@@ -134,21 +113,16 @@
         </div>
         {% endif %}
 
-        {# estudios #}
         {% if a.estudios %}
         <div style="margin-top:0.75rem;">
           <div class="muted" style="font-size:0.75rem; font-weight:600;
-                                    text-transform:uppercase; margin-bottom:0.4rem;">
-            Estudios
-          </div>
+               text-transform:uppercase; margin-bottom:0.4rem;">Estudios</div>
           {% for e in a.estudios %}
-          <div style="background:color-mix(in srgb, #ff9500 10%, transparent);
+          <div style="background:color-mix(in srgb,#ff9500 10%,transparent);
                       border-radius:6px; padding:0.5rem 0.75rem;
                       margin-bottom:0.3rem; font-size:0.875rem;">
-            <div>
-              🔬 <strong>{{ e.tipo }}</strong>
-              <span class="muted">· {{ e.fecha }}</span>
-            </div>
+            🔬 <strong>{{ e.tipo }}</strong>
+            <span class="muted">· {{ e.fecha }}</span>
             {% if e.resultado %}
             <div class="muted" style="margin-top:0.2rem;">{{ e.resultado }}</div>
             {% endif %}
@@ -157,22 +131,12 @@
         </div>
         {% endif %}
 
-        {# observaciones #}
-        {% if a.observaciones %}
-        <div style="margin-top:0.5rem;">
-          <div class="muted" style="font-size:0.75rem; font-weight:600;
-                                    text-transform:uppercase; margin-bottom:0.2rem;">
-            Observaciones
-          </div>
-          <div>{{ a.observaciones }}</div>
-        </div>
-        {% endif %}
-
       </div>
+      {% endif %}
       {% endfor %}
-
     {% else %}
-      <div class="card" style="text-align:center; padding:2rem; color:var(--text-muted);">
+      <div class="card" style="text-align:center; padding:2rem;
+                                color:var(--muted);">
         Sin atenciones previas registradas.
       </div>
     {% endif %}
@@ -180,238 +144,152 @@
 
   {# ════ columna derecha: nueva atención ════════════════════ #}
   <div>
-    <div class="section-title" style="margin-bottom:0.5rem;">Nueva atención</div>
+    <div class="section-title" style="margin-bottom:0.5rem;">
+      {% if atencion_previa %}
+        ⏸️ Continuar atención pausada
+      {% else %}
+        Nueva atención
+      {% endif %}
+    </div>
     <div class="muted" style="font-size:0.85rem; margin-bottom:1rem;">
-      {{ hoy_datetime }} &nbsp;·&nbsp; Vet: {{ current_user.nombre }} {{ current_user.apellido }}
+      {{ hoy_datetime }} &nbsp;·&nbsp;
+      Vet: {{ current_user.user_name }}
     </div>
 
     <form method="post"
-          action="{{ url_for('turnos.atender', turno_id=turno.id) }}"
+          action="{{ url_for('turnos.atender', turno_id=turno.id) }}">
 
       <div class="card" style="margin-bottom:1rem;">
 
+        {% for field_name, field_label in [
+          ("anamnesis",     "Anamnesis / Motivo de consulta"),
+          ("examen_fisico", "Examen físico"),
+          ("diagnostico",   "Diagnóstico"),
+          ("tratamiento",   "Tratamiento"),
+          ("observaciones", "Observaciones"),
+        ] %}
         <div style="margin-bottom:0.75rem;">
           <label class="muted" style="font-size:0.8rem; font-weight:600;
-                                      text-transform:uppercase; display:block;
-                                      margin-bottom:0.3rem;">
-            Anamnesis / Motivo de consulta
+                 text-transform:uppercase; display:block; margin-bottom:0.3rem;">
+            {{ field_label }}
+            {% if field_name == "diagnostico" %}
+            <span style="color:var(--danger,#f85149);">*</span>
+            <span style="font-weight:400; text-transform:none;">
+              (obligatorio para cerrar)
+            </span>
+            {% endif %}
           </label>
-          <textarea name="anamnesis" rows="3"
+          <textarea name="{{ field_name }}" rows="3"
                     style="width:100%; box-sizing:border-box; resize:vertical;
-                           background:var(--surface-2, #21262d);
                            border:1px solid var(--border); border-radius:8px;
-                           color:var(--text); padding:0.6rem 0.75rem;
-                           font-family:inherit; font-size:0.9rem;">{{ form.anamnesis or '' }}</textarea>
+                           color:var(--ink); padding:0.6rem 0.75rem;
+                           font-family:inherit; font-size:0.9rem;">{{ form[field_name] if form and form[field_name] else '' }}</textarea>
         </div>
+        {% endfor %}
 
-        <div style="margin-bottom:0.75rem;">
-          <label class="muted" style="font-size:0.8rem; font-weight:600;
-                                      text-transform:uppercase; display:block;
-                                      margin-bottom:0.3rem;">
-            Examen físico
-          </label>
-          <textarea name="examen_fisico" rows="3"
-                    style="width:100%; box-sizing:border-box; resize:vertical;
-                           background:var(--surface-2, #21262d);
-                           border:1px solid var(--border); border-radius:8px;
-                           color:var(--text); padding:0.6rem 0.75rem;
-                           font-family:inherit; font-size:0.9rem;">{{ form.examen_fisico or '' }}</textarea>
-        </div>
-                {# ── constantes vitales ───────────────────────────────────── #}
-        <div class="section-title" style="margin-top:1rem; margin-bottom:0.5rem;
-            font-size:0.85rem;">Constantes vitales</div>
-        <div class="card" style="margin-bottom:1rem; padding:1rem;">
-          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
-                      gap:0.75rem;">
+      </div>
 
-            <div>
-              <label class="muted" style="font-size:0.75rem; font-weight:600;
-                    text-transform:uppercase; display:block; margin-bottom:0.3rem;
-  min-height:2.2rem">
-                Temperatura (°C)
-              </label>
-              <input type="number" name="temperatura_c" step="0.1" min="35" max="43"
-                    placeholder="ej: 38.5"
-                    style="width:100%; background:var(--surface-2,#f2f4f7);
-                            border:1px solid var(--border); border-radius:8px;
-                            color:var(--ink); padding:0.6rem 0.75rem; font-size:0.9rem;">
-            </div>
-
-            <div>
-              <label class="muted" style="font-size:0.75rem; font-weight:600;
-                    text-transform:uppercase; display:block; margin-bottom:0.3rem;
-  min-height:2.2rem">
-                Peso consulta (kg)
-              </label>
-              <input type="number" name="peso_consulta_kg" step="0.1" min="0"
-                    placeholder="ej: 12.3"
-                    style="width:100%; background:var(--surface-2,#f2f4f7);
-                            border:1px solid var(--border); border-radius:8px;
-                            color:var(--ink); padding:0.6rem 0.75rem; font-size:0.9rem;">
-            </div>
-
-            <div>
-              <label class="muted" style="font-size:0.75rem; font-weight:600;
-                    text-transform:uppercase; display:block; margin-bottom:0.3rem;
-  min-height:2.2rem">
-                Frec. cardíaca (rpm)
-              </label>
-              <input type="number" name="fc_rpm" min="0" placeholder="ej: 80"
-                    style="width:100%; background:var(--surface-2,#f2f4f7);
-                            border:1px solid var(--border); border-radius:8px;
-                            color:var(--ink); padding:0.6rem 0.75rem; font-size:0.9rem;">
-            </div>
-
-            <div>
-              <label class="muted" style="font-size:0.75rem; font-weight:600;
-                    text-transform:uppercase; display:block; margin-bottom:0.3rem;
-  min-height:2.2rem">
-                Frec. respiratoria (rpm)
-              </label>
-              <input type="number" name="fr_rpm" min="0" placeholder="ej: 20"
-                    style="width:100%; background:var(--surface-2,#f2f4f7);
-                            border:1px solid var(--border); border-radius:8px;
-                            color:var(--ink); padding:0.6rem 0.75rem; font-size:0.9rem;">
-            </div>
-
-            <div>
-              <label class="muted" style="font-size:0.75rem; font-weight:600;
-                    text-transform:uppercase; display:block; margin-bottom:0.3rem;
-  min-height:2.2rem">
-                TRC (seg)
-              </label>
-              <input type="number" name="trc_seg" step="0.1" min="0" placeholder="ej: 1.5"
-                    style="width:100%; background:var(--surface-2,#f2f4f7);
-                            border:1px solid var(--border); border-radius:8px;
-                            color:var(--ink); padding:0.6rem 0.75rem; font-size:0.9rem;">
-            </div>
-
-            <div>
-              <label class="muted" style="font-size:0.75rem; font-weight:600;
-                    text-transform:uppercase; display:block; margin-bottom:0.3rem;
-  min-height:2.2rem">
-                Mucosas
-              </label>
-              <select name="mucosas"
-                      style="width:100%; background:var(--surface-2,#f2f4f7);
-                            border:1px solid var(--border); border-radius:8px;
-                            color:var(--ink); padding:0.6rem 0.75rem; font-size:0.9rem;">
-                <option value="">— seleccionar —</option>
-                <option value="rosadas">Rosadas</option>
-                <option value="palidas">Pálidas</option>
-                <option value="cianoticas">Cianóticas</option>
-                <option value="ictericas">Ictéricas</option>
-                <option value="congestionadas">Congestionadas</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="muted" style="font-size:0.75rem; font-weight:600;
-                    text-transform:uppercase; display:block; margin-bottom:0.3rem;
-  min-height:2.2rem">
-                Condición corporal (1-9)
-              </label>
-              <input type="number" name="condicion_corporal" min="1" max="9"
-                    placeholder="ej: 5"
-                    style="width:100%; background:var(--surface-2,#f2f4f7);
-                            border:1px solid var(--border); border-radius:8px;
-                            color:var(--ink); padding:0.6rem 0.75rem; font-size:0.9rem;">
-            </div>
-
-            <div>
-              <label class="muted" style="font-size:0.75rem; font-weight:600;
-                    text-transform:uppercase; display:block; margin-bottom:0.3rem;
-  min-height:2.2rem">
-                Dolor (0-10)
-              </label>
-              <input type="number" name="dolor" min="0" max="10" placeholder="ej: 3"
-                    style="width:100%; background:var(--surface-2,#f2f4f7);
-                            border:1px solid var(--border); border-radius:8px;
-                            color:var(--ink); padding:0.6rem 0.75rem; font-size:0.9rem;">
-            </div>
-
+      {# ── constantes vitales ───────────────────────────────── #}
+      <div class="section-title"
+           style="font-size:0.85rem; margin-bottom:0.5rem;">
+        Constantes vitales
+      </div>
+      <div class="card" style="margin-bottom:1rem;">
+        <div style="display:grid;
+                    grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+                    gap:0.75rem;">
+          {% for fname, flabel, ftype, fmin, fmax, fstep in [
+            ("temperatura_c",    "Temperatura (°C)", "number", 35, 43,  0.1),
+            ("peso_consulta_kg", "Peso consulta (kg)","number", 0, None, 0.1),
+            ("fc_rpm",           "FC (lpm)",          "number", 0, None, 1),
+            ("fr_rpm",           "FR (rpm)",          "number", 0, None, 1),
+            ("trc_seg",          "TRC (seg)",         "number", 0, None, 0.1),
+            ("condicion_corporal","Condición (1-9)",  "number", 1, 9,   1),
+            ("dolor",            "Dolor (0-10)",      "number", 0, 10,  1),
+          ] %}
+          <div>
+            <label class="muted"
+                   style="font-size:0.75rem; font-weight:600;
+                          text-transform:uppercase; display:block;
+                          margin-bottom:0.3rem;">
+              {{ flabel }}
+            </label>
+            <input type="{{ ftype }}" name="{{ fname }}"
+                   step="{{ fstep }}"
+                   {% if fmin is not none %}min="{{ fmin }}"{% endif %}
+                   {% if fmax is not none %}max="{{ fmax }}"{% endif %}
+                   value="{{ form[fname] if form and form[fname] else '' }}"
+                   style="width:100%; padding:0.6rem 0.75rem;
+                          border:1px solid var(--border); border-radius:8px;
+                          color:var(--ink); font:inherit; box-sizing:border-box;">
           </div>
-        </div>
-        <div style="margin-bottom:0.75rem;">
-          <label class="muted" style="font-size:0.8rem; font-weight:600;
-                                      text-transform:uppercase; display:block;
-                                      margin-bottom:0.3rem;">
-            Diagnóstico <span style="color:var(--danger, #f85149);">*</span>
-          </label>
-          <textarea name="diagnostico" rows="3" required
-                    style="width:100%; box-sizing:border-box; resize:vertical;
-                           background:var(--surface-2, #21262d);
-                           border:1px solid var(--border); border-radius:8px;
-                           color:var(--text); padding:0.6rem 0.75rem;
-                           font-family:inherit; font-size:0.9rem;">{{ form.diagnostico or '' }}</textarea>
-        </div>
+          {% endfor %}
 
-        <div style="margin-bottom:0.75rem;">
-          <label class="muted" style="font-size:0.8rem; font-weight:600;
-                                      text-transform:uppercase; display:block;
-                                      margin-bottom:0.3rem;">
-            Tratamiento
-          </label>
-          <textarea name="tratamiento" rows="3"
-                    style="width:100%; box-sizing:border-box; resize:vertical;
-                           background:var(--surface-2, #21262d);
+          <div>
+            <label class="muted"
+                   style="font-size:0.75rem; font-weight:600;
+                          text-transform:uppercase; display:block;
+                          margin-bottom:0.3rem;">
+              Mucosas
+            </label>
+            <select name="mucosas"
+                    style="width:100%; padding:0.6rem 0.75rem;
                            border:1px solid var(--border); border-radius:8px;
-                           color:var(--text); padding:0.6rem 0.75rem;
-                           font-family:inherit; font-size:0.9rem;">{{ form.tratamiento or '' }}</textarea>
-        </div>
-
-        <div>
-          <label class="muted" style="font-size:0.8rem; font-weight:600;
-                                      text-transform:uppercase; display:block;
-                                      margin-bottom:0.3rem;">
-            Observaciones
-          </label>
-          <textarea name="observaciones" rows="2"
-                    style="width:100%; box-sizing:border-box; resize:vertical;
-                           background:var(--surface-2, #21262d);
-                           border:1px solid var(--border); border-radius:8px;
-                           color:var(--text); padding:0.6rem 0.75rem;
-                           font-family:inherit; font-size:0.9rem;">{{ form.observaciones or '' }}</textarea>
+                           color:var(--ink); font:inherit;">
+              <option value="">—</option>
+              {% for opt in ["Rosadas","Pálidas","Congestivas","Cianóticas"] %}
+              <option value="{{ opt }}"
+                {{ 'selected' if form and form.get('mucosas') == opt else '' }}>
+                {{ opt }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
       </div>
 
       {# ── medicaciones ─────────────────────────────────────── #}
-      <div style="display:flex; justify-content:space-between; align-items:center;
-                  margin-bottom:0.5rem;">
+      <div style="display:flex; justify-content:space-between;
+                  align-items:center; margin-bottom:0.5rem;">
         <div class="muted" style="font-size:0.8rem; font-weight:600;
-                                   text-transform:uppercase;">
-          Medicaciones
-        </div>
-        <button type="button" class="link" onclick="addMed()">+ Agregar</button>
+             text-transform:uppercase;">Medicaciones</div>
+        <button type="button" class="link" onclick="addMed()">
+          + Agregar
+        </button>
       </div>
-
       <div id="meds-container" style="margin-bottom:1rem;">
-        {# filas existentes si hubo error de validación #}
-        {% for m in form.medicaciones or [] %}
-        <div class="med-row card" style="padding:0.75rem; margin-bottom:0.5rem;
-                                          background:color-mix(in srgb,#bc8cff 6%,transparent);
-                                          border:1px solid color-mix(in srgb,#bc8cff 20%,transparent);">
-          <input type="text" name="med_medicamento[]" placeholder="Medicamento"
-                 value="{{ m.medicamento }}"
+        {% for m in form.medicaciones if form and form.medicaciones %}
+        <div class="med-row card"
+             style="padding:0.75rem; margin-bottom:0.5rem;
+                    background:color-mix(in srgb,#bc8cff 6%,transparent);
+                    border:1px solid color-mix(in srgb,#bc8cff 20%,transparent);">
+          <input type="text" name="med_medicamento[]"
+                 placeholder="Medicamento" value="{{ m.medicamento }}"
                  style="width:100%; margin-bottom:0.4rem; box-sizing:border-box;
-                        background:var(--surface-2,#21262d); border:1px solid var(--border);
-                        border-radius:6px; color:var(--text); padding:0.4rem 0.6rem;">
-          <div style="display:grid; grid-template-columns:1fr 1fr 1fr 80px; gap:0.4rem;">
-            <input type="text" name="med_dosis[]"        placeholder="Dosis"      value="{{ m.dosis }}"
-                   style="background:var(--surface-2,#21262d); border:1px solid var(--border);
-                          border-radius:6px; color:var(--text); padding:0.4rem 0.6rem;">
-            <input type="text" name="med_via[]"          placeholder="Vía"        value="{{ m.via }}"
-                   style="background:var(--surface-2,#21262d); border:1px solid var(--border);
-                          border-radius:6px; color:var(--text); padding:0.4rem 0.6rem;">
-            <input type="text" name="med_frecuencia[]"   placeholder="Frecuencia" value="{{ m.frecuencia }}"
-                   style="background:var(--surface-2,#21262d); border:1px solid var(--border);
-                          border-radius:6px; color:var(--text); padding:0.4rem 0.6rem;">
-            <input type="number" name="med_duracion[]"   placeholder="Días"       value="{{ m.duracion_dias }}"
-                   style="background:var(--surface-2,#21262d); border:1px solid var(--border);
-                          border-radius:6px; color:var(--text); padding:0.4rem 0.6rem;">
+                        border:1px solid var(--border); border-radius:6px;
+                        color:var(--ink); padding:0.4rem 0.6rem;">
+          <div style="display:grid;
+                      grid-template-columns:1fr 1fr 1fr 80px; gap:0.4rem;">
+            <input type="text" name="med_dosis[]"
+                   placeholder="Dosis" value="{{ m.dosis or '' }}"
+                   style="border:1px solid var(--border); border-radius:6px;
+                          color:var(--ink); padding:0.4rem 0.6rem;">
+            <input type="text" name="med_via[]"
+                   placeholder="Vía" value="{{ m.via or '' }}"
+                   style="border:1px solid var(--border); border-radius:6px;
+                          color:var(--ink); padding:0.4rem 0.6rem;">
+            <input type="text" name="med_frecuencia[]"
+                   placeholder="Frecuencia" value="{{ m.frecuencia or '' }}"
+                   style="border:1px solid var(--border); border-radius:6px;
+                          color:var(--ink); padding:0.4rem 0.6rem;">
+            <input type="number" name="med_duracion[]"
+                   placeholder="Días" value="{{ m.duracion_dias or '' }}"
+                   style="border:1px solid var(--border); border-radius:6px;
+                          color:var(--ink); padding:0.4rem 0.6rem;">
           </div>
           <div style="text-align:right; margin-top:0.3rem;">
-            <button type="button" class="danger-link" onclick="this.closest('.med-row').remove()">
+            <button type="button" class="danger-link"
+                    onclick="this.closest('.med-row').remove()">
               Quitar
             </button>
           </div>
@@ -420,32 +298,35 @@
       </div>
 
       {# ── estudios ─────────────────────────────────────────── #}
-      <div style="display:flex; justify-content:space-between; align-items:center;
-                  margin-bottom:0.5rem;">
+      <div style="display:flex; justify-content:space-between;
+                  align-items:center; margin-bottom:0.5rem;">
         <div class="muted" style="font-size:0.8rem; font-weight:600;
-                                   text-transform:uppercase;">
-          Estudios / Análisis
-        </div>
-        <button type="button" class="link" onclick="addEst()">+ Agregar</button>
+             text-transform:uppercase;">Estudios / Análisis</div>
+        <button type="button" class="link" onclick="addEst()">
+          + Agregar
+        </button>
       </div>
-
       <div id="ests-container" style="margin-bottom:1rem;">
-        {% for e in form.estudios or [] %}
-        <div class="est-row card" style="padding:0.75rem; margin-bottom:0.5rem;
-                                          background:color-mix(in srgb,#ff9500 6%,transparent);
-                                          border:1px solid color-mix(in srgb,#ff9500 20%,transparent);">
-          <input type="text" name="est_tipo[]" placeholder="Tipo (ej: Hemograma, Rx tórax)"
+        {% for e in form.estudios if form and form.estudios %}
+        <div class="est-row card"
+             style="padding:0.75rem; margin-bottom:0.5rem;
+                    background:color-mix(in srgb,#ff9500 6%,transparent);
+                    border:1px solid color-mix(in srgb,#ff9500 20%,transparent);">
+          <input type="text" name="est_tipo[]"
+                 placeholder="Tipo (ej: Hemograma, Rx tórax)"
                  value="{{ e.tipo }}"
                  style="width:100%; margin-bottom:0.4rem; box-sizing:border-box;
-                        background:var(--surface-2,#21262d); border:1px solid var(--border);
-                        border-radius:6px; color:var(--text); padding:0.4rem 0.6rem;">
-          <textarea name="est_resultado[]" rows="2" placeholder="Resultado / Interpretación"
-                    style="width:100%; box-sizing:border-box; resize:vertical; margin-bottom:0.3rem;
-                           background:var(--surface-2,#21262d); border:1px solid var(--border);
-                           border-radius:6px; color:var(--text); padding:0.4rem 0.6rem;
-                           font-family:inherit;">{{ e.resultado }}</textarea>
+                        border:1px solid var(--border); border-radius:6px;
+                        color:var(--ink); padding:0.4rem 0.6rem;">
+          <textarea name="est_resultado[]" rows="2"
+                    placeholder="Resultado / Interpretación"
+                    style="width:100%; box-sizing:border-box; resize:vertical;
+                           margin-bottom:0.3rem; font-family:inherit;
+                           border:1px solid var(--border); border-radius:6px;
+                           color:var(--ink); padding:0.4rem 0.6rem;">{{ e.resultado }}</textarea>
           <div style="text-align:right;">
-            <button type="button" class="danger-link" onclick="this.closest('.est-row').remove()">
+            <button type="button" class="danger-link"
+                    onclick="this.closest('.est-row').remove()">
               Quitar
             </button>
           </div>
@@ -453,43 +334,57 @@
         {% endfor %}
       </div>
 
-      {# ── monto + submit ───────────────────────────────────── #}
-      <div style="display:flex; justify-content:space-between; align-items:center;
-                  gap:1rem; flex-wrap:wrap;">
-        {#<div>
-          <label class="muted" style="font-size:0.8rem; font-weight:600;
-                                      text-transform:uppercase; display:block;
-                                      margin-bottom:0.3rem;">
-            Monto ($)
-          </label>
-          <input type="number" name="monto" step="0.01" min="0"
-                 value="{{ form.monto or '0' }}" placeholder="0"
-                 style="width:160px; background:var(--surface-2,#21262d);
-                        border:1px solid var(--border); border-radius:8px;
-                        color:var(--text); padding:0.6rem 0.75rem; font-size:0.9rem;">
-        </div>#}
-        <button type="submit" class="button">Guardar atención</button>
-      </div>
-
+      {# ── errores / mensajes ───────────────────────────────── #}
       {% if error %}
-      <div style="color:var(--danger,#f85149); margin-top:0.75rem;">{{ error }}</div>
+      <div class="alert error" style="margin-bottom:1rem;">{{ error }}</div>
       {% endif %}
       {% if success %}
-      <div style="color:var(--success,#3fb950); margin-top:0.75rem;">{{ success }}</div>
+      <div class="alert success" style="margin-bottom:1rem;">{{ success }}</div>
       {% endif %}
+
+      {# ══════════════════════════════════════════════════════
+         FOOTER CON DOS BOTONES
+      ══════════════════════════════════════════════════════ #}
+      <div style="display:flex; gap:0.75rem; align-items:center;
+                  flex-wrap:wrap; padding-top:0.5rem;
+                  border-top:1px solid var(--border); margin-top:0.5rem;">
+
+        {# Botón PAUSAR #}
+        <button type="submit" name="accion" value="pausar"
+                style="display:inline-flex; align-items:center; gap:0.4rem;
+                       min-height:2.6rem; padding:0.7rem 1.2rem;
+                       border:1px solid #d29922; border-radius:8px;
+                       background:rgba(210,153,34,0.1); color:#d29922;
+                       font:inherit; font-weight:600; cursor:pointer;">
+          ⏸️ Guardar y pausar
+        </button>
+
+        {# Botón CERRAR ATENCIÓN #}
+        <button type="submit" name="accion" value="cerrar"
+                class="button"
+                style="margin-left:auto;">
+          ✓ Cerrar atención
+        </button>
+
+        <span class="muted" style="font-size:0.8rem; width:100%;">
+          <strong>Pausar</strong> guarda los datos y vuelve a la agenda
+          para atender otro paciente. &nbsp;
+          <strong>Cerrar</strong> requiere diagnóstico y finaliza la consulta.
+        </span>
+      </div>
 
     </form>
   </div>
 
 </div>
 
-{# ── scripts: filas dinámicas ─────────────────────────────── #}
+{# ── scripts dinámicos ────────────────────────────────────── #}
 <script>
-const inputStyle = `background:var(--surface-2,#21262d); border:1px solid var(--border);
-                    border-radius:6px; color:var(--text); padding:0.4rem 0.6rem;`;
+const inputStyle = `border:1px solid var(--border); border-radius:6px;
+                    color:var(--ink); padding:0.4rem 0.6rem;`;
 
 function addMed() {
-  const container = document.getElementById('meds-container');
+  const c = document.getElementById('meds-container');
   const row = document.createElement('div');
   row.className = 'med-row card';
   row.style.cssText = `padding:0.75rem; margin-bottom:0.5rem;
@@ -497,38 +392,48 @@ function addMed() {
     border:1px solid color-mix(in srgb,#bc8cff 20%,transparent);`;
   row.innerHTML = `
     <input type="text" name="med_medicamento[]" placeholder="Medicamento"
-           style="width:100%; margin-bottom:0.4rem; box-sizing:border-box; ${inputStyle}">
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 80px; gap:0.4rem;">
-      <input type="text"   name="med_dosis[]"      placeholder="Dosis"      style="${inputStyle}">
-      <input type="text"   name="med_via[]"         placeholder="Vía"        style="${inputStyle}">
-      <input type="text"   name="med_frecuencia[]"  placeholder="Frecuencia" style="${inputStyle}">
-      <input type="number" name="med_duracion[]"    placeholder="Días"       style="${inputStyle}">
+           style="width:100%; margin-bottom:0.4rem;
+                  box-sizing:border-box; ${inputStyle}">
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 80px;
+                gap:0.4rem;">
+      <input type="text"   name="med_dosis[]"      placeholder="Dosis"
+             style="${inputStyle}">
+      <input type="text"   name="med_via[]"         placeholder="Vía"
+             style="${inputStyle}">
+      <input type="text"   name="med_frecuencia[]"  placeholder="Frecuencia"
+             style="${inputStyle}">
+      <input type="number" name="med_duracion[]"    placeholder="Días"
+             style="${inputStyle}">
     </div>
     <div style="text-align:right; margin-top:0.3rem;">
       <button type="button" class="danger-link"
               onclick="this.closest('.med-row').remove()">Quitar</button>
     </div>`;
-  container.appendChild(row);
+  c.appendChild(row);
 }
 
 function addEst() {
-  const container = document.getElementById('ests-container');
+  const c = document.getElementById('ests-container');
   const row = document.createElement('div');
   row.className = 'est-row card';
   row.style.cssText = `padding:0.75rem; margin-bottom:0.5rem;
     background:color-mix(in srgb,#ff9500 6%,transparent);
     border:1px solid color-mix(in srgb,#ff9500 20%,transparent);`;
   row.innerHTML = `
-    <input type="text" name="est_tipo[]" placeholder="Tipo (ej: Hemograma, Rx tórax)"
-           style="width:100%; margin-bottom:0.4rem; box-sizing:border-box; ${inputStyle}">
-    <textarea name="est_resultado[]" rows="2" placeholder="Resultado / Interpretación"
-              style="width:100%; box-sizing:border-box; resize:vertical; margin-bottom:0.3rem;
-                     font-family:inherit; ${inputStyle}"></textarea>
+    <input type="text" name="est_tipo[]"
+           placeholder="Tipo (ej: Hemograma, Rx tórax)"
+           style="width:100%; margin-bottom:0.4rem;
+                  box-sizing:border-box; ${inputStyle}">
+    <textarea name="est_resultado[]" rows="2"
+              placeholder="Resultado / Interpretación"
+              style="width:100%; box-sizing:border-box; resize:vertical;
+                     margin-bottom:0.3rem; font-family:inherit;
+                     ${inputStyle}"></textarea>
     <div style="text-align:right;">
       <button type="button" class="danger-link"
               onclick="this.closest('.est-row').remove()">Quitar</button>
     </div>`;
-  container.appendChild(row);
+  c.appendChild(row);
 }
 </script>
 
