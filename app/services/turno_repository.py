@@ -105,7 +105,7 @@ class TurnoRepository:
             JOIN cliente  c ON c.id = p.cliente_id
             JOIN users    u ON u.id = t.veterinario_id
             WHERE DATE(t.fecha_hora) = ?
-            AND t.estado NOT IN ('cancelado','ausente','atendido')
+            AND t.estado NOT IN ('cancelado','ausente')
         """
         params = [hoy]
         if veterinario_id:
