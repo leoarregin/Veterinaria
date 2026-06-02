@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{# 2026-05-29 Leo Arregin: Página de reportes con filtros por tipo de informe y rango de fechas. #}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+  <div>
+    <div class="section-title">Reportes clínicos</div>
+    <p class="muted">Historial de mascotas, atenciones por período, médico y cliente.</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:1rem;">
+  <form method="get" action="{{ url_for('reports.index') }}" style="display:grid; gap:1rem;">
+    <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end;">
+      <label style="flex:1; min-width:220px;">
+        Tipo de reporte
+        <select name="report_type" required>
+          <option value="historial" {% if report_type == 'historial' %}selected{% endif %}>Historial clínico de mascota</option>
+          <option value="periodo" {% if report_type == 'periodo' %}selected{% endif %}>Total de atenciones por período</option>
+          <option value="medico" {% if report_type == 'medico' %}selected{% endif %}>Total de atenciones por médico</option>
+          <option value="cliente" {% if report_type == 'cliente' %}selected{% endif %}>Frecuencia de atención por cliente</option>
+        </select>
+      </label>
+      <label style="flex:1; min-width:180px;">
+        Fecha inicio
+        <input type="date" name="start_date" value="{{ start_date }}">
+      </label>
+      <label style="flex:1; min-width:180px;">
+        Fecha fin
+        <input type="date" name="end_date" value="{{ end_date }}">
+      </label>
+      <label style="flex:1; min-width:220px;">
+        Mascota
+        <select name="paciente_id">
+          <option value="">-- Todas --</option>
+          {% for paciente in pacientes %}
+            <option value="{{ paciente.id }}" {% if paciente_id == paciente.id %}selected{% endif %}>
+              {{ paciente.nombre }} — {{ paciente.propietario }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="button" type="submit" style="white-space:nowrap;">Actualizar</button>
+      <a class="button" href="{{ url_for('reports.pdf', report_type=report_type, start_date=start_date, end_date=end_date, paciente_id=paciente_id, sort_by=sort_by, sort_dir=sort_dir, periodo_sort_by=periodo_sort_by, periodo_sort_dir=periodo_sort_dir, client_sort_by=client_sort_by, client_sort_dir=client_sort_dir) }}" style="white-space:nowrap; text-decoration:none;">Exportar PDF</a>
+    </div>
+  </form>
+</div>
+
+<div class="grid" style="margin-top:1rem; gap:1rem;">
+  <div class="card">
+    <div class="muted">Total de períodos</div>
+    <div class="metric">{{ atenciones_periodo | length }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Médicos</div>
+    <div class="metric">{{ atenciones_medico | length }}</div>
+  </div>
+  <div class="card">
+    <div class="muted">Clientes con atenciones</div>
+    <div class="metric">{{ frecuencia_cliente | length }}</div>
+  </div>
+</div>
+
+{% set show_historial = report_type == 'historial' %}
+{% set show_periodo = report_type == 'periodo' %}
+{% set show_medico = report_type == 'medico' %}
+{% set show_cliente = report_type == 'cliente' %}
+
+{% if show_historial %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:1.5rem;">
+  <div class="section-title">Historial clínico de mascota</div>
+  <a class="button" href="{{ url_for('reports.pdf', report_type='historial', start_date=start_date, end_date=end_date, paciente_id=paciente_id, sort_by=sort_by, sort_dir=sort_dir, periodo_sort_by=periodo_sort_by, periodo_sort_dir=periodo_sort_dir, client_sort_by=client_sort_by, client_sort_dir=client_sort_dir) }}" style="white-space:nowrap; text-decoration:none;">PDF</a>
+</div>
+{% if selected_paciente %}
+<div class="card" style="margin-bottom:1rem;">
+  <div style="text-align:right; margin-bottom:0.75rem;">
+    <span class="muted" style="font-size:0.85rem;">Fecha del reporte</span>
+    <div style="font-weight:700;">{{ report_date }}</div>
+  </div>
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+    <div>
+      <div style="font-size:1.25rem; font-weight:700; margin-bottom:0.25rem;">{{ selected_paciente.nombre }}</div>
+      <div class="muted">Cliente: <strong>{{ selected_paciente.propietario }}</strong></div>
+      <div class="muted">Especie: <strong>{{ selected_paciente.especie }}</strong></div>
+    </div>
+    <div style="text-align:right; min-width:220px;">
+      <div class="muted">Sexo: <strong>{{ selected_paciente.sexo }}</strong></div>
+      <div class="muted">Raza: <strong>{{ selected_paciente.raza or '—' }}</strong></div>
+      <div class="muted">Nacimiento: <strong>{{ selected_paciente.fecha_nacimiento or '—' }}</strong></div>
+    </div>
+  </div>
+</div>
+
+{% if historial %}
+  {% for a in historial %}
+  <div class="card" style="margin-bottom:1rem; padding:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+      <div>
+        <div style="font-size:1.05rem; font-weight:700; color:var(--primary);">{{ a.fecha_hora | format_datetime }}</div>
+        <div style="margin-top:0.25rem;">
+          <span class="muted">Veterinario:</span> <strong>{{ a.veterinario }}</strong>
+        </div>
+      </div>
+      <div style="text-align:right; min-width:220px;">
+        <div class="muted">Tipo de atención</div>
+        <div><strong>{{ a.tipo_atencion or 'Normal' }}</strong></div>
+        <div class="muted" style="margin-top:0.5rem;">Motivo</div>
+        <div>{{ a.motivo_consulta or '—' }}</div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:0.75rem; margin-bottom:1rem;">
+      {% for label, value in [
+        ('Temperatura', a.temperatura_c),
+        ('Peso (kg)', a.peso_consulta_kg),
+        ('FC (rpm)', a.fc_rpm),
+        ('FR (rpm)', a.fr_rpm),
+        ('TRC (seg)', a.trc_seg),
+      ] %}
+      <div style="padding:0.75rem; border:1px solid var(--border); border-radius:10px; background:var(--surface);">
+        <div class="muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">{{ label }}</div>
+        <div style="font-weight:700;">{{ value if value is not none else '—' }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% for label, value in [
+      ('Anamnesis', a.anamnesis),
+      ('Examen físico', a.examen_fisico),
+      ('Diagnóstico principal', a.diagnostico),
+      ('Tratamiento / seguimiento', a.tratamiento),
+      ('Recomendaciones', a.observaciones),
+    ] %}
+    {% if value %}
+    <div style="margin-bottom:0.75rem;">
+      <div class="muted" style="font-size:0.75rem; font-weight:700; text-transform:uppercase; margin-bottom:0.25rem;">{{ label }}</div>
+      <div>{{ value }}</div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {% if a.medicaciones %}
+    <div style="margin-top:0.75rem;">
+      <div class="muted" style="font-size:0.75rem; font-weight:700; text-transform:uppercase; margin-bottom:0.25rem;">Medicación</div>
+      {% for m in a.medicaciones %}
+      <div style="padding:0.75rem; border:1px solid var(--border); border-radius:10px; margin-bottom:0.5rem;">
+        <strong>{{ m.medicamento }}</strong>
+        {% if m.dosis %}<span>· {{ m.dosis }}</span>{% endif %}
+        {% if m.via %}<span>· {{ m.via }}</span>{% endif %}
+        {% if m.frecuencia %}<div class="muted">Frecuencia: {{ m.frecuencia }}</div>{% endif %}
+        {% if m.duracion_dias %}<div class="muted">Duración: {{ m.duracion_dias }} días</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if a.estudios %}
+    <div style="margin-top:0.75rem;">
+      <div class="muted" style="font-size:0.75rem; font-weight:700; text-transform:uppercase; margin-bottom:0.25rem;">Estudios</div>
+      {% for e in a.estudios %}
+      <div style="padding:0.5rem; border:1px solid var(--border); border-radius:8px; margin-bottom:0.5rem;">
+        <strong>{{ e.tipo }}</strong> <span class="muted">· {{ e.fecha }}</span>
+        {% if e.descripcion %}
+        <div>{{ e.descripcion }}</div>
+        {% endif %}
+        {% if e.resultado %}
+        <div class="muted">Resultado: {{ e.resultado }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card" style="text-align:center; color:var(--muted);">
+    No hay historial clínico registrado para esta mascota.
+  </div>
+{% endif %}
+{% else %}
+  <div class="card" style="text-align:center; color:var(--muted);">
+    Selecciona una mascota para ver su historial clínico.
+  </div>
+{% endif %}
+{% endif %}
+
+{% if show_periodo %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:1.5rem;">
+  <div class="section-title">Total de atenciones por día</div>
+  <a class="button" href="{{ url_for('reports.pdf', report_type='periodo', start_date=start_date, end_date=end_date, paciente_id=paciente_id, sort_by=sort_by, sort_dir=sort_dir, periodo_sort_by=periodo_sort_by, periodo_sort_dir=periodo_sort_dir, client_sort_by=client_sort_by, client_sort_dir=client_sort_dir) }}" style="white-space:nowrap; text-decoration:none;">PDF</a>
+</div>
+<div class="card">
+  <div style="text-align:right; margin-bottom:0.75rem;">
+    <span class="muted" style="font-size:0.85rem;">Fecha del reporte</span>
+    <div style="font-weight:700;">{{ report_date }}</div>
+  </div>
+  {% if atenciones_periodo %}
+    {% macro periodo_sort_link(column, label) -%}
+      {% set current = periodo_sort_by == column %}
+      {% set direction = 'asc' if not current or periodo_sort_dir == 'desc' else 'desc' %}
+      {% set arrow = '↑' if current and periodo_sort_dir == 'asc' else '↓' if current else '' %}
+      <a href="{{ url_for('reports.index', report_type='periodo', start_date=start_date, end_date=end_date, paciente_id=paciente_id, periodo_sort_by=column, periodo_sort_dir=direction) }}">
+        {{ label }} {{ arrow }}
+      </a>
+    {%- endmacro %}
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">{{ periodo_sort_link('dia', 'Día') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ periodo_sort_link('total', 'Total') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ periodo_sort_link('normal', 'Normal') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ periodo_sort_link('urgente', 'Urgente') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ periodo_sort_link('emergencia', 'Emergencia') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in atenciones_periodo %}
+          <tr>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.dia }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.total_atenciones or 0 }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.normal or 0 }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.urgente or 0 }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.emergencia or 0 }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No se encontraron atenciones en el período seleccionado.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if show_medico %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:1.5rem;">
+  <div class="section-title">Total de atenciones por médico</div>
+  <a class="button" href="{{ url_for('reports.pdf', report_type='medico', start_date=start_date, end_date=end_date, paciente_id=paciente_id, sort_by=sort_by, sort_dir=sort_dir, periodo_sort_by=periodo_sort_by, periodo_sort_dir=periodo_sort_dir, client_sort_by=client_sort_by, client_sort_dir=client_sort_dir) }}" style="white-space:nowrap; text-decoration:none;">PDF</a>
+</div>
+<div class="card">
+  <div style="text-align:right; margin-bottom:0.75rem;">
+    <span class="muted" style="font-size:0.85rem;">Fecha del reporte</span>
+    <div style="font-weight:700;">{{ report_date }}</div>
+  </div>
+  {% if atenciones_medico %}
+    {% macro sort_link(column, label) -%}
+      {% set current = sort_by == column %}
+      {% set direction = 'asc' if not current or sort_dir == 'desc' else 'desc' %}
+      {% set arrow = '↑' if current and sort_dir == 'asc' else '↓' if current else '' %}
+      <a href="{{ url_for('reports.index', report_type='medico', start_date=start_date, end_date=end_date, paciente_id=paciente_id, sort_by=column, sort_dir=direction) }}">
+        {{ label }} {{ arrow }}
+      </a>
+    {%- endmacro %}
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">{{ sort_link('veterinario', 'Médico') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ sort_link('total', 'Total') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ sort_link('normal', 'Normal') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ sort_link('urgente', 'Urgente') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ sort_link('emergencia', 'Emergencia') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in atenciones_medico %}
+          <tr>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.veterinario }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.total_atenciones or 0 }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.normal or 0 }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.urgente or 0 }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.emergencia or 0 }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No hay atenciones registradas para ningún médico en ese período.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if show_cliente %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:1.5rem;">
+  <div class="section-title">Frecuencia de atención por cliente</div>
+  <a class="button" href="{{ url_for('reports.pdf', report_type='cliente', start_date=start_date, end_date=end_date, paciente_id=paciente_id, sort_by=sort_by, sort_dir=sort_dir, periodo_sort_by=periodo_sort_by, periodo_sort_dir=periodo_sort_dir, client_sort_by=client_sort_by, client_sort_dir=client_sort_dir) }}" style="white-space:nowrap; text-decoration:none;">PDF</a>
+</div>
+<div class="card">
+  <div style="text-align:right; margin-bottom:0.75rem;">
+    <span class="muted" style="font-size:0.85rem;">Fecha del reporte</span>
+    <div style="font-weight:700;">{{ report_date }}</div>
+  </div>
+  {% if frecuencia_cliente %}
+    {% macro client_sort_link(column, label) -%}
+      {% set current = client_sort_by == column %}
+      {% set direction = 'asc' if not current or client_sort_dir == 'desc' else 'desc' %}
+      {% set arrow = '↑' if current and client_sort_dir == 'asc' else '↓' if current else '' %}
+      <a href="{{ url_for('reports.index', report_type='cliente', start_date=start_date, end_date=end_date, paciente_id=paciente_id, client_sort_by=column, client_sort_dir=direction) }}">
+        {{ label }} {{ arrow }}
+      </a>
+    {%- endmacro %}
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:0.75rem; border-bottom:1px solid var(--border);">{{ client_sort_link('cliente', 'Cliente') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ client_sort_link('mascotas', 'Mascotas') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ client_sort_link('atenciones', 'Atenciones') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ client_sort_link('promedio', 'Promedio/mascota') }}</th>
+          <th style="text-align:right; padding:0.75rem; border-bottom:1px solid var(--border);">{{ client_sort_link('ultima', 'Última atención') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in frecuencia_cliente %}
+          <tr>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.cliente }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.mascotas or 0 }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.atenciones or 0 }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.promedio_por_mascota or 0 }}</td>
+            <td style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:right;">{{ row.ultima_atencion }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No se encontraron clientes con atenciones en ese período.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

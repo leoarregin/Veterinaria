@@ -332,6 +332,8 @@
             {% if current_user.user_role in ('Administrador', 'Recepcionista') %}
               <a href="{{ url_for('turnos.nuevo') }}" class="button">+ Nuevo turno</a>
             {% endif %}
+            {# 2026-05-29 Leo Arregin: Acceso a reportes como última opción antes de cerrar sesión. #}
+            <a href="{{ url_for('reports.index') }}">Reportes</a>
             <form class="nav-form" method="post" action="{{ url_for('auth.logout') }}">
               <button type="submit">Cerrar sesión</button>
             </form>

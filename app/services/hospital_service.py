@@ -125,5 +125,39 @@ class HospitalService:
     def get_historial(self, mascota_id: int) -> list[dict]:
         return self.turno_repository.get_historial(mascota_id)
 
+    # 2026-05-29 Leo Arregin: Métodos de servicio para consultas de reportes.
+    def get_atenciones_totales_por_periodo(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        sort_by: str = "dia",
+        sort_dir: str = "desc",
+    ) -> list[dict]:
+        return self.turno_repository.get_atenciones_totales_por_periodo(
+            start_date, end_date, sort_by, sort_dir
+        )
+
+    def get_atenciones_totales_por_medico(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        sort_by: str = "total",
+        sort_dir: str = "desc",
+    ) -> list[dict]:
+        return self.turno_repository.get_atenciones_totales_por_medico(
+            start_date, end_date, sort_by, sort_dir
+        )
+
+    def get_frecuencia_atencion_por_cliente(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        sort_by: str = "atenciones",
+        sort_dir: str = "desc",
+    ) -> list[dict]:
+        return self.turno_repository.get_frecuencia_atencion_por_cliente(
+            start_date, end_date, sort_by, sort_dir
+        )
+
     def guardar_atencion(self, data: dict, previa: dict | None = None) -> int:
         return self.turno_repository.guardar_atencion(data, previa)

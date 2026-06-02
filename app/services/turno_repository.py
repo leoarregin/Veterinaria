@@ -384,12 +384,14 @@ class TurnoRepository:
         with self._connect() as conn:
             rows = conn.execute("""
                 SELECT a.id, a.fecha_hora, a.anamnesis, a.examen_fisico,
-                a.diagnostico, a.tratamiento, a.observaciones,
-                a.temperatura_c, a.peso_consulta_kg, a.fc_rpm, a.fr_rpm,
-                a.trc_seg, a.mucosas, a.condicion_corporal, a.dolor,
-                0.0 AS monto,
-                u.full_name AS veterinario
+                       a.diagnostico, a.tratamiento, a.observaciones,
+                       a.temperatura_c, a.peso_consulta_kg, a.fc_rpm, a.fr_rpm,
+                       a.trc_seg, a.mucosas, a.condicion_corporal, a.dolor,
+                       u.full_name AS veterinario,
+                       t.motivo AS motivo_consulta,
+                       t.urgencia AS tipo_atencion
                 FROM atencion a
+                LEFT JOIN turno t ON t.id = a.turno_id
                 JOIN users u ON u.id = a.veterinario_id
                 WHERE a.paciente_id = ?
                 ORDER BY a.fecha_hora DESC
@@ -408,6 +410,127 @@ class TurnoRepository:
             """, (a["id"],)).fetchall()]
             result.append(a)
         return result
+
+    # 2026-05-29 Leo Arregin: Consultas SQL para los reportes demandados.
+    def get_atenciones_totales_por_periodo(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        sort_by: str = "dia",
+        sort_dir: str = "desc",
+    ) -> list[dict]:
+        order_fields = {
+            "dia": "DATE(a.fecha_hora)",
+            "total": "total_atenciones",
+            "normal": "normal",
+            "urgente": "urgente",
+            "emergencia": "emergencia",
+        }
+        order_column = order_fields.get(sort_by, "DATE(a.fecha_hora)")
+        order_direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+
+        query = """
+            SELECT DATE(a.fecha_hora) AS dia,
+                   COUNT(*) AS total_atenciones,
+                   COUNT(CASE WHEN lower(COALESCE(t.urgencia, 'normal')) = 'normal' THEN 1 END) AS normal,
+                   COUNT(CASE WHEN lower(t.urgencia) = 'urgente' THEN 1 END) AS urgente,
+                   COUNT(CASE WHEN lower(t.urgencia) = 'emergencia' THEN 1 END) AS emergencia
+            FROM atencion a
+            JOIN turno t ON t.id = a.turno_id
+            WHERE a.estado = 'cerrado'
+        """
+        params = []
+        if start_date:
+            query += " AND DATE(a.fecha_hora) >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND DATE(a.fecha_hora) <= ?"
+            params.append(end_date)
+        query += f" GROUP BY DATE(a.fecha_hora) ORDER BY {order_column} {order_direction}, DATE(a.fecha_hora) DESC"
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_atenciones_totales_por_medico(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        sort_by: str = "total",
+        sort_dir: str = "desc",
+    ) -> list[dict]:
+        order_fields = {
+            "veterinario": "u.full_name",
+            "total": "total_atenciones",
+            "normal": "normal",
+            "urgente": "urgente",
+            "emergencia": "emergencia",
+        }
+        order_column = order_fields.get(sort_by, "total_atenciones")
+        order_direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+
+        query = """
+            SELECT u.full_name AS veterinario,
+                   COUNT(*) AS total_atenciones,
+                   COUNT(CASE WHEN lower(COALESCE(t.urgencia, 'normal')) = 'normal' THEN 1 END) AS normal,
+                   COUNT(CASE WHEN lower(t.urgencia) = 'urgente' THEN 1 END) AS urgente,
+                   COUNT(CASE WHEN lower(t.urgencia) = 'emergencia' THEN 1 END) AS emergencia
+            FROM atencion a
+            JOIN users u ON u.id = a.veterinario_id
+            JOIN turno t ON t.id = a.turno_id
+            WHERE a.estado = 'cerrado'
+        """
+        params = []
+        if start_date:
+            query += " AND DATE(a.fecha_hora) >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND DATE(a.fecha_hora) <= ?"
+            params.append(end_date)
+        query += f" GROUP BY u.id ORDER BY {order_column} {order_direction}, u.full_name"
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_frecuencia_atencion_por_cliente(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        sort_by: str = "atenciones",
+        sort_dir: str = "desc",
+    ) -> list[dict]:
+        order_fields = {
+            "cliente": "cliente",
+            "atenciones": "atenciones",
+            "mascotas": "mascotas",
+            "promedio": "promedio_por_mascota",
+            "ultima": "ultima_atencion",
+        }
+        order_column = order_fields.get(sort_by, "atenciones")
+        order_direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
+
+        query = """
+            SELECT c.id AS cliente_id,
+                   c.nombre || ' ' || c.apellido AS cliente,
+                   COUNT(*) AS atenciones,
+                   COUNT(DISTINCT p.id) AS mascotas,
+                   ROUND(COUNT(*) * 1.0 / COUNT(DISTINCT p.id), 1) AS promedio_por_mascota,
+                   MAX(a.fecha_hora) AS ultima_atencion
+            FROM atencion a
+            JOIN paciente p ON p.id = a.paciente_id
+            JOIN cliente c ON c.id = p.cliente_id
+            WHERE a.estado = 'cerrado'
+        """
+        params = []
+        if start_date:
+            query += " AND DATE(a.fecha_hora) >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND DATE(a.fecha_hora) <= ?"
+            params.append(end_date)
+        query += f" GROUP BY c.id ORDER BY {order_column} {order_direction}, cliente"
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
 
     def guardar_atencion(self, data: dict,
                         previa: dict | None = None) -> int:

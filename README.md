@@ -6,6 +6,7 @@ Proyecto base en Python y Flask con arquitectura MVC para la gestion de un Hospi
 
 - Python 3.10+
 - Flask 3.0.3
+- reportlab 4.5.1 (exportación PDF de reportes)
 
 ## Instalacion
 
@@ -28,6 +29,19 @@ python run.py
 ```
 
 Luego abre `http://127.0.0.1:5000`.
+
+## Funcionalidad de reportes
+
+La aplicación incluye una sección de reportes accesible desde `/reportes/` con los siguientes tipos de informe:
+
+- Historial clínico de mascota
+- Total de atenciones por día
+- Total de atenciones por médico
+- Frecuencia de atención por cliente
+
+Además, cada reporte puede exportarse en PDF desde la interfaz con el botón `PDF`/`Exportar PDF`.
+
+También se incorporó soporte para ordenar columnas en los reportes de médico, período y cliente, incluyendo métricas como total, normal, urgente, emergencia, promedio por mascota y última atención.
 
 ## Estructura del proyecto
 

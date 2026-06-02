@@ -5,6 +5,9 @@ from app.controllers.main_controller      import main_bp
 from app.controllers.users_controller     import users_bp
 from app.controllers.dashboard_controller import dashboard_bp   # nuevo
 from app.controllers.turnos_controller    import turnos_bp      # nuevo
+from app.controllers.reports_controller   import reports_bp    # nuevos reportes
+# 2026-05-29 Leo Arregin: Registro del blueprint de reportes para habilitar
+# la nueva sección de informes.
 
 
 def create_app() -> Flask:
@@ -16,6 +19,7 @@ def create_app() -> Flask:
     app.register_blueprint(users_bp)
     app.register_blueprint(dashboard_bp)   # nuevo
     app.register_blueprint(turnos_bp)      # nuevo
+    app.register_blueprint(reports_bp)     # nuevos reportes
 
     # filtro de fecha para los templates
     @app.template_filter("format_datetime")
