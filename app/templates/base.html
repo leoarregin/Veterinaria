@@ -317,7 +317,6 @@
         </div>
         {#<nav class="nav">
           <a href="/">Inicio</a>
-          <a href="/usuarios/">Usuarios</a>
           {% if session.user_id %}
           <form class="nav-form" method="post" action="{{ url_for('auth.logout') }}">
             <button type="submit">Cerrar sesion</button>
@@ -326,8 +325,10 @@
         </nav> #}
         <nav class="nav">
           <a href="/">Inicio</a>
-          <a href="/usuarios/">Usuarios</a>
           {% if session.user_id %}
+            {% if current_user.user_role == 'Administrador' %}
+              <a href="{{ url_for('users.index') }}">Usuarios</a>
+            {% endif %}
             <a href="{{ url_for('dashboard.index') }}">Agenda del día</a>
             {% if current_user.user_role in ('Administrador', 'Recepcionista') %}
               <a href="{{ url_for('turnos.nuevo') }}" class="button">+ Nuevo turno</a>

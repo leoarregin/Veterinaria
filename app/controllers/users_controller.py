@@ -1,12 +1,25 @@
 from datetime import datetime
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from app.services.hospital_service import HospitalService
+from app.services.user_repository import GENERIC_PASSWORD
 
 
 users_bp = Blueprint("users", __name__, url_prefix="/usuarios")
 service = HospitalService()
+
+
+def _is_admin() -> bool:
+    return session.get("user_role") == "Administrador"
+
+
+@users_bp.before_request
+def require_admin():
+    if not _is_admin():
+        flash("Solo un usuario Administrador puede acceder a usuarios.", "error")
+        return redirect(url_for("main.home"))
+    return None
 
 
 @users_bp.route("/")
@@ -50,15 +63,39 @@ def save():
             flash("Usuario actualizado correctamente.", "success")
         else:
             if not password:
-                flash("La contrasena es obligatoria para crear un usuario.", "error")
-                return redirect(url_for("users.new"))
+                password = GENERIC_PASSWORD
             email = ""
             last_access = datetime.now().isoformat(timespec="minutes")
-            service.user_repository.create(username, password, full_name, role, status, last_access, email)
+            service.user_repository.create(
+                username,
+                password,
+                full_name,
+                role,
+                status,
+                last_access,
+                email,
+                must_change_password=password == GENERIC_PASSWORD,
+            )
             flash("Usuario creado correctamente.", "success")
     except Exception as exc:
         flash(f"No se pudo guardar el usuario: {exc}", "error")
 
+    return redirect(url_for("users.index"))
+
+
+@users_bp.route("/restablecer-contrasena/<int:user_id>", methods=["POST"])
+def reset_password(user_id: int):
+    if not _is_admin():
+        flash("Solo un usuario Administrador puede restablecer contrasenas.", "error")
+        return redirect(url_for("users.index"))
+
+    user = service.user_repository.get_by_id(user_id)
+    if user is None:
+        flash("El usuario solicitado no existe.", "error")
+        return redirect(url_for("users.index"))
+
+    service.user_repository.reset_password_to_generic(user_id)
+    flash(f"Contrasena de {user.full_name} restablecida a {GENERIC_PASSWORD}.", "success")
     return redirect(url_for("users.index"))
 
 

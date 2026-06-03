@@ -4,6 +4,7 @@ from datetime import datetime
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from app.services.hospital_service import HospitalService
+from app.services.user_repository import GENERIC_PASSWORD
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -19,8 +20,6 @@ def validar_password(password: str) -> str | None:
         return "Minimo 8 caracteres."
     if not re.search(r"[A-Z]", password):
         return "Debe tener al menos una mayuscula."
-    if not re.search(r"[a-z]", password):
-        return "Debe tener al menos una minuscula."
     if not re.search(r"\d", password):
         return "Debe tener al menos un numero."
     return None
@@ -46,7 +45,43 @@ def login():
     session["user_id"] = user.id
     session["user_name"] = user.full_name
     session["user_role"] = user.role
+    session["must_change_password"] = user.must_change_password
+    if user.must_change_password:
+        flash("Debes cambiar la contrasena generica antes de continuar.", "error")
+        return redirect(url_for("auth.change_password"))
     flash(f"Bienvenido, {user.full_name}.", "success")
+    return redirect(url_for("main.home"))
+
+
+@auth_bp.route("/cambiar-contrasena", methods=["GET", "POST"])
+def change_password():
+    if "user_id" not in session:
+        return redirect(url_for("auth.login"))
+
+    if request.method == "GET":
+        return render_template("change_password.html")
+
+    password = request.form["password"]
+    confirm_password = request.form["confirm_password"]
+
+    if not password or not confirm_password:
+        flash("Completa todos los campos.", "error")
+        return redirect(url_for("auth.change_password"))
+    if password == GENERIC_PASSWORD:
+        flash("La nueva contrasena no puede ser la clave generica.", "error")
+        return redirect(url_for("auth.change_password"))
+
+    password_error = validar_password(password)
+    if password_error:
+        flash(password_error, "error")
+        return redirect(url_for("auth.change_password"))
+    if password != confirm_password:
+        flash("Las contrasenas no coinciden.", "error")
+        return redirect(url_for("auth.change_password"))
+
+    service.user_repository.change_password(session["user_id"], password)
+    session["must_change_password"] = False
+    flash("Contrasena actualizada correctamente.", "success")
     return redirect(url_for("main.home"))
 
 

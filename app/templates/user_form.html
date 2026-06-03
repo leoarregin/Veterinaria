@@ -20,7 +20,8 @@
       {% if not user %}
       <label>
         <div class="muted" style="margin-bottom:0.35rem;">Contrasena</div>
-        <input type="password" name="password" required>
+        <input type="password" name="password" placeholder="pass123">
+        <div class="muted" style="margin-top:0.35rem;">Si se deja vacia, se asigna pass123 y se pedira cambiarla en el primer ingreso.</div>
       </label>
       {% else %}
       <div class="card" style="padding:0.85rem 1rem; background:var(--surface-tint);">

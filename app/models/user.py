@@ -11,4 +11,5 @@ class User:
     status: str
     last_access: datetime
     email: str = ""
+    must_change_password: bool = False
     role_id: int | None = None

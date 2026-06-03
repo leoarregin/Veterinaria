@@ -8,6 +8,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app.models.user import User
 
 
+GENERIC_PASSWORD = "pass123"
+
+
 class UserRepository:
     def __init__(self, db_path: str | None = None) -> None:
         base_dir = Path(__file__).resolve().parents[2]
@@ -39,19 +42,21 @@ class UserRepository:
                 conn.execute("ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''")
             if "email" not in columns:
                 conn.execute("ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''")
+            if "must_change_password" not in columns:
+                conn.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0")
             total = conn.execute("SELECT COUNT(*) AS total FROM users").fetchone()["total"]
             if total == 0:
                 now = datetime.now().isoformat(timespec="minutes")
                 seed = [
-                    ("admin", "", generate_password_hash("admin123"), "Administrador General", "Administrador", "Activo", now),
-                    ("recepcion1", "", generate_password_hash("recepcion123"), "Laura Fernandez", "Recepcionista", "Activo", now),
-                    ("vetmartinez", "", generate_password_hash("vet123"), "Dra. Martinez", "Veterinario", "Activo", now),
-                    ("admincont", "", generate_password_hash("cont123"), "Carlos Perez", "Administrativo", "Inactivo", now),
+                    ("admin", "", generate_password_hash("admin123"), "Administrador General", "Administrador", "Activo", now, 0),
+                    ("recepcion1", "", generate_password_hash("recepcion123"), "Laura Fernandez", "Recepcionista", "Activo", now, 0),
+                    ("vetmartinez", "", generate_password_hash("vet123"), "Dra. Martinez", "Veterinario", "Activo", now, 0),
+                    ("admincont", "", generate_password_hash("cont123"), "Carlos Perez", "Administrativo", "Inactivo", now, 0),
                 ]
                 conn.executemany(
                     """
-                    INSERT INTO users (username, email, password_hash, full_name, role, status, last_access)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO users (username, email, password_hash, full_name, role, status, last_access, must_change_password)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     seed,
                 )
@@ -85,15 +90,25 @@ class UserRepository:
         status: str,
         last_access: str,
         email: str = "",
+        must_change_password: bool = False,
     ) -> None:
         with self._connect() as conn:
             self._ensure_unique_login(conn, username, email)
             conn.execute(
                 """
-                INSERT INTO users (username, email, password_hash, full_name, role, status, last_access)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (username, email, password_hash, full_name, role, status, last_access, must_change_password)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (username, email, generate_password_hash(password), full_name, role, status, last_access),
+                (
+                    username,
+                    email,
+                    generate_password_hash(password),
+                    full_name,
+                    role,
+                    status,
+                    last_access,
+                    1 if must_change_password else 0,
+                ),
             )
 
     def update(
@@ -146,6 +161,7 @@ class UserRepository:
             conn.execute("UPDATE users SET last_access = ? WHERE id = ?", (now, row["id"]))
             updated = dict(row)
             updated["last_access"] = now
+            updated["must_change_password"] = bool(row["must_change_password"]) or password == GENERIC_PASSWORD
             return self._row_to_user(updated)
 
     def get_by_username_or_email(self, login: str) -> User | None:
@@ -159,6 +175,28 @@ class UserRepository:
             ).fetchone()
         return self._row_to_user(row) if row else None
 
+    def reset_password_to_generic(self, user_id: int) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE users
+                SET password_hash = ?, must_change_password = 1
+                WHERE id = ?
+                """,
+                (generate_password_hash(GENERIC_PASSWORD), user_id),
+            )
+
+    def change_password(self, user_id: int, password: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE users
+                SET password_hash = ?, must_change_password = 0
+                WHERE id = ?
+                """,
+                (generate_password_hash(password), user_id),
+            )
+
     def _row_to_user(self, row: sqlite3.Row | dict) -> User:
         return User(
             id=row["id"],
@@ -168,6 +206,7 @@ class UserRepository:
             status=row["status"],
             last_access=datetime.fromisoformat(row["last_access"]),
             email=row["email"] if "email" in row.keys() else "",
+            must_change_password=bool(row["must_change_password"]) if "must_change_password" in row.keys() else False,
         )
 
     def _ensure_unique_login(self, conn: sqlite3.Connection, username: str, email: str) -> None:
@@ -212,10 +251,10 @@ class UserRepository:
             last_access = row["fecha_registro"].replace(" ", "T")[:16]
             conn.execute(
                 """
-                INSERT INTO users (username, email, password_hash, full_name, role, status, last_access)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (username, email, password_hash, full_name, role, status, last_access, must_change_password)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (row["usuario"], row["email"], row["password_hash"], full_name, "Administrativo", "Activo", last_access),
+                (row["usuario"], row["email"], row["password_hash"], full_name, "Administrativo", "Activo", last_access, 0),
             )
 
     def _backfill_seed_passwords(self, conn: sqlite3.Connection) -> None:

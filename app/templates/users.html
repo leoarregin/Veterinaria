@@ -33,10 +33,20 @@
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ user.email or '-' }}</td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ user.full_name }}</td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ user.role }}</td>
-        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ user.status }}</td>
+        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+          {{ user.status }}
+          {% if user.must_change_password %}
+            <span class="badge badge-pendiente" style="margin-left:0.35rem;">Clave generica</span>
+          {% endif %}
+        </td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ user.last_access.strftime("%d/%m/%Y %H:%M") }}</td>
         <td style="padding:0.75rem; border-bottom:1px solid var(--border); display:flex; gap:0.5rem; flex-wrap:wrap;">
           <a href="{{ url_for('users.edit', user_id=user.id) }}" class="link">Editar</a>
+          {% if current_user.user_role == 'Administrador' %}
+          <form method="post" action="{{ url_for('users.reset_password', user_id=user.id) }}" onsubmit="return confirm('Restablecer la contrasena a pass123?');" style="margin:0;">
+            <button type="submit" class="link" style="border:0; background:none; cursor:pointer; font:inherit; padding:0;">Restablecer</button>
+          </form>
+          {% endif %}
           <form method="post" action="{{ url_for('users.delete', user_id=user.id) }}" onsubmit="return confirm('¿Eliminar este usuario?');" style="margin:0;">
             <button type="submit" class="danger-link">Eliminar</button>
           </form>

@@ -33,10 +33,13 @@ def create_app() -> Flask:
     @app.before_request
     def require_login():
         public_endpoints = {"auth.login", "auth.register", "static"}
+        password_change_endpoints = {"auth.change_password", "auth.logout"}
         if request.endpoint in public_endpoints or request.endpoint is None:
             return None
         if "user_id" not in session:
             return redirect(url_for("auth.login"))
+        if session.get("must_change_password") and request.endpoint not in password_change_endpoints:
+            return redirect(url_for("auth.change_password"))
         return None
 
     @app.context_processor
