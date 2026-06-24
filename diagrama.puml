@@ -1,0 +1,53 @@
+@startuml
+left to right direction
+
+actor Recepcionista
+actor Veterinario
+actor Administrador
+
+rectangle "Sistema de Gestión Veterinaria" {
+
+    usecase "Agendar Turno" as CU1
+    usecase "Aplicar Triage" as CU2
+    usecase "Alta Rápida Cliente" as CU3
+    usecase "Alta Rápida Mascota" as CU4
+
+    usecase "Consultar Agenda del Día" as CU5
+    usecase "Registrar Atención Médica" as CU6
+    usecase "Registrar Constantes Vitales" as CU7
+    usecase "Registrar Diagnóstico" as CU8
+    usecase "Prescribir Tratamiento" as CU9
+    usecase "Pausar Atención" as CU10
+    usecase "Cerrar Consulta" as CU11
+    usecase "Generar Resumen PDF" as CU12
+
+    usecase "Gestionar Usuarios" as CU13
+    usecase "Crear Usuario" as CU14
+    usecase "Modificar Usuario" as CU15
+    usecase "Desactivar Usuario" as CU16
+}
+
+Recepcionista --> CU1
+
+CU1 --> CU2 : <<include>>
+CU3 ..> CU1 : <<extend>>
+CU4 ..> CU1 : <<extend>>
+
+Veterinario --> CU5
+Veterinario --> CU6
+
+CU6 --> CU7 : <<include>>
+CU6 --> CU8 : <<include>>
+CU6 --> CU9 : <<include>>
+CU10 ..> CU6 : <<extend>>
+
+CU11 --> CU12 : <<include>>
+CU6 --> CU11 : <<include>>
+
+Administrador --> CU13
+
+CU13 --> CU14 : <<include>>
+CU13 --> CU15 : <<include>>
+CU13 --> CU16 : <<include>>
+
+@enduml
